@@ -9,6 +9,7 @@ use Engelsystem\Config\Config;
 use Engelsystem\Controllers\BaseController;
 use Engelsystem\Controllers\HasUserNotifications;
 use Engelsystem\Helpers\Authenticator;
+use Engelsystem\Http\Exceptions\HttpForbidden;
 use Engelsystem\Http\Exceptions\HttpNotFound;
 use Engelsystem\Http\Redirector;
 use Engelsystem\Http\Request;
@@ -17,7 +18,7 @@ use Engelsystem\Models\User\User;
 use Engelsystem\Models\Worklog;
 use Psr\Log\LoggerInterface;
 
-class UserWorkLogController extends BaseController
+class UserWorklogController extends BaseController
 {
     use HasUserNotifications;
 
@@ -39,15 +40,13 @@ class UserWorkLogController extends BaseController
 
     public function editWorklog(Request $request): Response
     {
-        $userId = (int) $request->getAttribute('user_id');
+        $user = $this->needsUser($request);
         $worklogId = $request->getAttribute('worklog_id'); // optional
-
-        $user = $this->user->findOrFail($userId);
 
         if (isset($worklogId)) {
             $worklog = $this->worklog->findOrFail((int) $worklogId);
 
-            if ($worklog->user->id != $userId) {
+            if ($worklog->user->id != $user->id) {
                 throw new HttpNotFound();
             }
             return $this->showEditWorklog($user, $worklog->worked_at, $worklog->hours, $worklog->comment, true);
@@ -58,10 +57,8 @@ class UserWorkLogController extends BaseController
 
     public function saveWorklog(Request $request): Response
     {
-        $userId = (int) $request->getAttribute('user_id');
+        $user = $this->needsUser($request);
         $worklogId = $request->getAttribute('worklog_id'); // optional
-
-        $user = $this->user->findOrFail($userId);
 
         $data = $this->validate($request, [
             'work_date' => 'required|date:Y-m-d',
@@ -69,10 +66,11 @@ class UserWorkLogController extends BaseController
             'comment' => 'required|max:200',
         ]);
 
+        // Search / create worklog
         if (isset($worklogId)) {
             $worklog = $this->worklog->findOrFail((int) $worklogId);
 
-            if ($worklog->user->id != $userId) {
+            if ($worklog->user->id != $user->id) {
                 throw new HttpNotFound();
             }
         } else {
@@ -97,36 +95,33 @@ class UserWorkLogController extends BaseController
         );
         $this->addNotification(isset($worklogId) ? 'worklog.edit.success' : 'worklog.add.success');
 
-        return $this->redirect->to('/users?action=view&user_id=' . $userId);
+        return $this->redirect->to('/users?action=view&user_id=' . $user->id);
         // TODO Once User_view.php gets removed, change this to withView + getNotifications
     }
 
     public function showDeleteWorklog(Request $request): Response
     {
-        $userId = (int) $request->getAttribute('user_id');
-        $worklogId = (int) $request->getAttribute('worklog_id');
-
-        $user = $this->user->findOrFail($userId);
+        $user = $this->needsUser($request);
+        $worklogId = $request->getAttribute('worklog_id');
         $worklog = $this->worklog->findOrFail($worklogId);
 
-        if ($worklog->user->id != $userId) {
+        if ($worklog->user->id != $user->id) {
             throw new HttpNotFound();
         }
 
         return $this->response->withView(
             'admin/user/delete-worklog.twig',
-            ['user' => $user]
+            ['userdata' => $user]
         );
     }
 
     public function deleteWorklog(Request $request): Response
     {
-        $userId = (int) $request->getAttribute('user_id');
-        $worklogId = (int) $request->getAttribute('worklog_id');
-
+        $user = $this->needsUser($request);
+        $worklogId = $request->getAttribute('worklog_id');
         $worklog = $this->worklog->findOrFail($worklogId);
 
-        if ($worklog->user->id != $userId) {
+        if ($worklog->user->id != $user->id) {
             throw new HttpNotFound();
         }
         $worklog->delete();
@@ -143,7 +138,7 @@ class UserWorkLogController extends BaseController
         );
         $this->addNotification('worklog.delete.success');
 
-        return $this->redirect->to('/users?action=view&user_id=' . $userId);
+        return $this->redirect->to('/users?action=view&user_id=' . $user->id);
         // TODO Once User_view.php gets removed, change this to withView + getNotifications
     }
 
@@ -157,12 +152,21 @@ class UserWorkLogController extends BaseController
         return $this->response->withView(
             'admin/user/edit-worklog.twig',
             [
-                'user' => $user,
+                'userdata' => $user,
                 'work_date' => $work_date,
                 'work_hours' => $work_hours,
                 'comment' => $comment,
                 'is_edit' => $is_edit,
             ]
         );
+    }
+
+    private function needsUser(Request $request): User
+    {
+        $userId = (int) $request->getAttribute('user_id');
+        if (!config('enable_self_worklog') && ($userId === $this->auth->user()->id)) {
+            throw new HttpForbidden();
+        }
+        return $this->user->findOrFail($userId);
     }
 }

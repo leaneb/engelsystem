@@ -67,23 +67,11 @@ class NewsController extends BaseController
         $news = $this->news->findOrNew($newsId);
 
         if ($request->request->has('delete')) {
-            $news->delete();
-
-            $this->log->info(
-                'Deleted {type} "{news}"',
-                [
-                    'type' => $news->is_meeting ? 'meeting' : 'news',
-                    'news' => $news->title,
-                ]
-            );
-
-            $this->addNotification('news.delete.success');
-
-            return $this->redirect->to('/news');
+            return $this->delete($news);
         }
 
         $data = $this->validate($request, [
-            'title'          => 'required',
+            'title'          => 'required|max:150',
             'text'           => 'required',
             'is_meeting'     => 'optional|checked',
             'is_pinned'      => 'optional|checked',
@@ -135,6 +123,23 @@ class NewsController extends BaseController
         );
 
         $this->addNotification('news.edit.success');
+
+        return $this->redirect->to('/news');
+    }
+
+    protected function delete(News $news): Response
+    {
+        $news->delete();
+
+        $this->log->info(
+            'Deleted {type} "{news}"',
+            [
+                'type' => $news->is_meeting ? 'meeting' : 'news',
+                'news' => $news->title,
+            ]
+        );
+
+        $this->addNotification('news.delete.success');
 
         return $this->redirect->to('/news');
     }

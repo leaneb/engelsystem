@@ -14,7 +14,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  * @property string|null $user_info
  * @property bool        $active
  * @property bool        $force_active
- * @property bool        $got_shirt
+ * @property bool        $got_goodie
  * @property int         $got_voucher
  *
  * @method static QueryBuilder|State[] whereArrived($value)
@@ -22,7 +22,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  * @method static QueryBuilder|State[] whereUserInfo($value)
  * @method static QueryBuilder|State[] whereActive($value)
  * @method static QueryBuilder|State[] whereForceActive($value)
- * @method static QueryBuilder|State[] whereGotShirt($value)
+ * @method static QueryBuilder|State[] whereGotGoodie($value)
  * @method static QueryBuilder|State[] whereGotVoucher($value)
  */
 class State extends HasUserModel
@@ -39,7 +39,7 @@ class State extends HasUserModel
         'user_info'    => null,
         'active'       => false,
         'force_active' => false,
-        'got_shirt'    => false,
+        'got_goodie'   => false,
         'got_voucher'  => 0,
     ];
 
@@ -47,11 +47,11 @@ class State extends HasUserModel
     protected $casts = [ // phpcs:ignore
         'user_id'      => 'integer',
         'arrived'      => 'boolean',
+        'arrival_date' => 'datetime',
         'active'       => 'boolean',
         'force_active' => 'boolean',
-        'got_shirt'    => 'boolean',
+        'got_goodie'   => 'boolean',
         'got_voucher'  => 'integer',
-        'arrival_date' => 'datetime',
     ];
 
     /**
@@ -66,7 +66,7 @@ class State extends HasUserModel
         'user_info',
         'active',
         'force_active',
-        'got_shirt',
+        'got_goodie',
         'got_voucher',
     ];
 }

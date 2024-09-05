@@ -3,6 +3,7 @@
 use Engelsystem\Models\Location;
 use Engelsystem\Models\Question;
 use Engelsystem\UserHintsRenderer;
+use Illuminate\Support\Str;
 
 /**
  * Render the user hints
@@ -28,7 +29,7 @@ function header_render_hints()
         $hints_renderer->addHint(render_user_pronoun_hint(), true);
         $hints_renderer->addHint(render_user_firstname_hint(), true);
         $hints_renderer->addHint(render_user_lastname_hint(), true);
-        $hints_renderer->addHint(render_user_tshirt_hint(), true);
+        $hints_renderer->addHint(render_user_goodie_hint(), true);
         $hints_renderer->addHint(render_user_dect_hint(), true);
         $hints_renderer->addHint(render_user_mobile_hint(), true);
 
@@ -58,7 +59,7 @@ function make_navigation()
     $pages = [
         'news'           => __('news.title'),
         'meetings'       => [__('news.title.meetings'), 'user_meetings'],
-        'user_shifts'    => __('Shifts'),
+        'user_shifts'    => __('general.shifts'),
         'angeltypes'     => __('angeltypes.angeltypes'),
         'questions'      => [__('Ask the Heaven'), 'question.add'],
     ];
@@ -85,18 +86,18 @@ function make_navigation()
         // path              => name,
         // path              => [name, permission],
 
-        'admin_arrive'       => 'Arrive angels',
+        'admin_arrive'       => [admin_arrive_title(), 'users.arrive.list'],
         'admin_active'       => 'Active angels',
         'users'              => ['All Angels', 'admin_user'],
         'admin_free'         => 'Free angels',
         'admin/questions'    => ['Answer questions', 'question.edit'],
-        'admin/shifttypes'   => ['shifttype.shifttypes', 'shifttypes'],
+        'admin/shifttypes'   => ['shifttype.shifttypes', 'shifttypes.view'],
         'admin_shifts'       => 'Create shifts',
         'admin/locations'    => ['location.locations', 'admin_locations'],
         'admin_groups'       => 'Grouprights',
         'admin/schedule'     => ['schedule.import', 'schedule.import'],
         'admin/logs'         => ['log.log', 'admin_log'],
-        'admin_event_config' => 'Event config',
+        'admin/config'       => ['config.config', 'config.edit'],
     ];
 
     if (config('autoarrive')) {
@@ -112,7 +113,7 @@ function make_navigation()
         $admin_menu[] = toolbar_dropdown_item(
             url(str_replace('_', '-', $menu_page)),
             htmlspecialchars(__($title)),
-            $menu_page == $page
+            $menu_page == $page || Str::startsWith($page, $menu_page . '/')
         );
     }
 

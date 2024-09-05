@@ -45,7 +45,7 @@ function admin_shifts()
     $location_array = $locations->pluck('name', 'id')->toArray();
 
     // Load angeltypes
-    /** @var AngelType[] $types */
+    /** @var AngelType[]|Collection $types */
     $types = AngelType::all();
     $no_angeltypes = $types->isEmpty();
     $needed_angel_types = [];
@@ -77,7 +77,7 @@ function admin_shifts()
         }
 
         // Name/Bezeichnung der Schicht, darf leer sein
-        $title = strip_request_item('title');
+        $title = substr(strip_request_item('title'), 0, 255);
 
         // Beschreibung der Schicht, darf leer sein
         $description = strip_request_item_nl('description');
@@ -339,9 +339,9 @@ function admin_shifts()
                 $shifts_table_entry = [
                     'timeslot'      =>
                         icon('clock-history') . ' '
-                        . $start->format(__('general.datetime'))
+                        . dateWithEventDay($start->format('Y-m-d')) . ' ' . $start->format(__('H:i'))
                         . ' - '
-                        . '<span title="' . $end->format(__('general.date')) . '">'
+                        . '<span title="' . dateWithEventDay($end->format('Y-m-d')) . '">'
                         . $end->format(__('H:i'))
                         . '</span>'
                         . ', ' . round($end->copy()->diffInMinutes($start) / 60, 2) . 'h'
@@ -455,7 +455,7 @@ function admin_shifts()
             );
         }
 
-        success('Shifts created.');
+        success(__('Shifts created.'));
         throw_redirect(url('/admin-shifts'));
     } else {
         $session->remove('admin_shifts_shifts');
@@ -511,8 +511,8 @@ function admin_shifts()
             form([
                 div('row', [
                     div('col-md-6 col-xl-5', [
-                        form_select('shifttype_id', __('Shifttype'), $shifttypes, $shifttype_id),
-                        form_text('title', __('title.title'), $title),
+                        form_select('shifttype_id', __('Shift type'), $shifttypes, $shifttype_id),
+                        form_text('title', __('title.title'), $title, false, 255),
                         form_select('lid', __('Location'), $location_array, $lid),
                     ]),
                     div('col-md-6 col-xl-7', [

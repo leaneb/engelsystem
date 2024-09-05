@@ -7,7 +7,7 @@
 {% block content %}
     <div class="container">
         <h1>
-            {{ m.button(m.icon('chevron-left'), url('/news'), null, 'sm', __('general.back')) }}
+            {{ m.back(url('/news')) }}
             {{ block('title') }}
         </h1>
 
@@ -42,6 +42,7 @@
                         {
                             'required': true,
                             'value': news ? news.title : '',
+                            'max_length': 150,
                         }
                     ) }}
                 </div>
@@ -52,7 +53,7 @@
                     {{ f.checkbox('is_pinned', __('news.edit.is_pinned'), {
                         'checked': is_pinned,
                     }) }}
-                    {% if has_permission_to('news.highlight') %}
+                    {% if can('news.highlight') %}
                         {{ f.checkbox('is_highlighted', __('news.edit.is_highlighted'), {
                             'checked': is_highlighted,
                         }) }}

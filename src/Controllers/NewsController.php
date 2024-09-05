@@ -102,8 +102,7 @@ class NewsController extends BaseController
         $comment = $this->comment->findOrFail($commentId);
         if (
             $comment->user->id != $this->auth->user()->id
-            && !$this->auth->can('admin_news')
-            && !$this->auth->can('comment.delete')
+            && !$this->auth->canAny(['admin_news', 'comment.delete'])
         ) {
             throw new HttpForbidden();
         }
@@ -145,7 +144,7 @@ class NewsController extends BaseController
             ->get();
 
         return $this->renderView(
-            'pages/news/overview.twig',
+            'pages/news/index.twig',
             [
                 'news'          => $news,
                 'pages'         => $pagesCount,
@@ -156,9 +155,6 @@ class NewsController extends BaseController
         );
     }
 
-    /**
-     * @param array $data
-     */
     protected function renderView(string $page, array $data): Response
     {
         return $this->response->withView($page, $data);

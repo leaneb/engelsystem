@@ -9,7 +9,7 @@
 {% block content %}
     <div class="container">
         <h1>
-            {{ m.button(m.icon('chevron-left'), url('/admin-active'), null, 'sm', __('general.back')) }}
+            {{ m.back(url('/admin-active')) }}
             {{ block('title') }}: <small>{{ m.user(userdata) }}</small>
         </h1>
 
@@ -32,7 +32,7 @@
                 <div class="col-md-6">
                     {{ f.switch('arrived', __('user.arrived'), {
                         'checked': userdata.state.arrived,
-                        'disabled': not has_permission_to('admin_arrive'),
+                        'disabled': not can('admin_arrive'),
                     }) }}
 
                     {% if userdata.state.force_active and config('enable_force_active') %}
@@ -46,8 +46,8 @@
                         'checked': userdata.state.active,
                     }) }}
 
-                    {{ f.switch('got_shirt', is_tshirt ? __('user.got_shirt') : __('user.got_goodie'), {
-                        'checked': userdata.state.got_shirt,
+                    {{ f.switch('got_goodie', is_tshirt ? __('user.got_shirt') : __('user.got_goodie'), {
+                        'checked': userdata.state.got_goodie,
                     }) }}
                 </div>
                 <div class="col-md-12">

@@ -75,7 +75,7 @@ class MessagesController extends BaseController
         $users->prepend($currentUser->displayName, $currentUser->id);
 
         return $this->response->withView(
-            'pages/messages/overview.twig',
+            'pages/messages/index.twig',
             [
                 'conversations' => $conversations,
                 'users' => $users,
@@ -171,7 +171,7 @@ class MessagesController extends BaseController
         if ($msg->user_id == $currentUser->id) {
             $msg->delete();
         } else {
-            throw new HttpForbidden('You can not delete a message you haven\'t send');
+            throw new HttpForbidden();
         }
 
         return $this->redirect->to('/messages/' . $otherUserId . '#newest');

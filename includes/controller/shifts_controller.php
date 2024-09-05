@@ -104,7 +104,7 @@ function shift_edit_controller()
             $shifttype_id = $request->input('shifttype_id');
         } else {
             $valid = false;
-            error(__('Please select a shifttype.'));
+            error(__('Please select a shift type.'));
         }
 
         if ($request->has('start') && $tmp = DateTime::createFromFormat('Y-m-d H:i', $request->input('start'))) {
@@ -195,7 +195,7 @@ function shift_edit_controller()
             htmlspecialchars($angeltype_name),
             $needed_angel_types[$angeltype_id],
             [],
-            ScheduleShift::whereShiftId($shift->id)->first() ? true : false,
+            (bool) ScheduleShift::whereShiftId($shift->id)->first(),
         );
     }
 
@@ -208,7 +208,7 @@ function shift_edit_controller()
             . info(__('This page is much more comfortable with javascript.'), true)
             . '</noscript>',
             form([
-                form_select('shifttype_id', __('Shifttype'), $shifttypes, $shifttype_id),
+                form_select('shifttype_id', __('Shift type'), $shifttypes, $shifttype_id),
                 form_text('title', __('title.title'), $title),
                 form_select('rid', __('Location:'), $locations, $rid),
                 form_text('start', __('Start:'), $start->format('Y-m-d H:i')),
@@ -243,18 +243,7 @@ function shift_delete_controller(): void
     $shift_id = $request->input('delete_shift');
     $shift = Shift::findOrFail($shift_id);
 
-    foreach ($shift->shiftEntries as $entry) {
-        event('shift.entry.deleting', [
-            'user'       => $entry->user,
-            'start'      => $shift->start,
-            'end'        => $shift->end,
-            'name'       => $shift->shiftType->name,
-            'title'      => $shift->title,
-            'type'       => $entry->angelType->name,
-            'location'   => $shift->location,
-            'freeloaded' => $entry->freeloaded,
-        ]);
-    }
+    event('shift.deleting', ['shift' => $shift]);
 
     $shift->delete();
 

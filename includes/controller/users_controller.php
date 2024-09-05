@@ -1,6 +1,7 @@
 <?php
 
 use Engelsystem\Database\Db;
+use Engelsystem\Models\AngelType;
 use Engelsystem\Models\Shifts\ShiftEntry;
 use Engelsystem\Models\User\State;
 use Engelsystem\Models\User\User;
@@ -205,7 +206,7 @@ function user_controller()
         }
     }
 
-    $shifts = Shifts_by_user($user_source->id, auth()->can('user_shifts_admin'));
+    $shifts = Shifts_by_user($user_source->id, true);
     foreach ($shifts as $shift) {
         // TODO: Move queries to model
         $shift->needed_angeltypes = Db::select(
@@ -238,15 +239,26 @@ function user_controller()
         auth()->resetApiKey($user_source);
     }
 
+    $goodie_score = sprintf('%.2f', User_goodie_score($user_source->id)) . '&nbsp;h';
     if ($user_source->state->force_active && config('enable_force_active')) {
-        $tshirt_score = __('Enough');
-    } else {
-        $tshirt_score = sprintf('%.2f', User_tshirt_score($user_source->id)) . '&nbsp;h';
+        $goodie_score = '<span title="' . $goodie_score . '">' . __('Enough') . '</span>';
     }
 
     $worklogs = $user_source->worklogs()
         ->with(['user', 'creator'])
         ->get();
+
+    $is_ifsg_supporter = (bool) AngelType::whereRequiresIfsgCertificate(true)
+        ->leftJoin('user_angel_type', 'user_angel_type.angel_type_id', 'angel_types.id')
+        ->where('user_angel_type.user_id', $user->id)
+        ->where('user_angel_type.supporter', true)
+        ->count();
+
+    $is_drive_supporter = (bool) AngelType::whereRequiresDriverLicense(true)
+        ->leftJoin('user_angel_type', 'user_angel_type.angel_type_id', 'angel_types.id')
+        ->where('user_angel_type.user_id', $user->id)
+        ->where('user_angel_type.supporter', true)
+        ->count();
 
     return [
         htmlspecialchars($user_source->displayName),
@@ -258,10 +270,14 @@ function user_controller()
             $user_source->groups,
             $shifts,
             $user->id == $user_source->id,
-            $tshirt_score,
-            auth()->can('admin_active'),
+            $goodie_score,
+            auth()->can('user.goodie.edit'),
             auth()->can('admin_user_worklog'),
-            $worklogs
+            $worklogs,
+            auth()->can('user.ifsg.edit')
+                || $is_ifsg_supporter
+                || auth()->can('user.drive.edit')
+                || $is_drive_supporter,
         ),
     ];
 }
@@ -291,7 +307,7 @@ function users_list_controller()
             'freeloads',
             'active',
             'force_active',
-            'got_shirt',
+            'got_goodie',
             'shirt_size',
             'planned_arrival_date',
             'planned_departure_date',
@@ -335,7 +351,7 @@ function users_list_controller()
             State::whereActive(true)->count(),
             State::whereForceActive(true)->count(),
             ShiftEntry::whereFreeloaded(true)->count(),
-            State::whereGotShirt(true)->count(),
+            State::whereGotGoodie(true)->count(),
             State::query()->sum('got_voucher')
         ),
     ];
@@ -456,7 +472,7 @@ function user_driver_license_required_hint()
     $user = auth()->user();
 
     // User has already entered data, no hint needed.
-    if ($user->license->wantsToDrive()) {
+    if (!config('driving_license_enabled') || $user->license->wantsToDrive()) {
         return null;
     }
 

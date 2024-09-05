@@ -51,6 +51,16 @@ $route->addGroup(
     }
 );
 
+// User admin settings
+$route->addGroup(
+    '/users/{user_id:\d+}',
+    function (RouteCollector $route): void {
+            $route->get('/certificates', 'Admin\\UserSettingsController@certificate');
+            $route->post('/certificates/ifsg', 'Admin\\UserSettingsController@saveIfsgCertificate');
+            $route->post('/certificates/driving', 'Admin\\UserSettingsController@saveDrivingLicense');
+    }
+);
+
 // Password recovery
 $route->addGroup(
     '/password/reset',
@@ -136,6 +146,9 @@ $route->addGroup(
 
                 $route->get('/news', 'Api\NewsController@index');
 
+                $route->get('/shifttypes', 'Api\ShiftTypeController@index');
+                $route->get('/shifttypes/{shifttype_id:\d+}/shifts', 'Api\ShiftsController@entriesByShiftType');
+
                 $route->get('/users/{user_id:(?:\d+|self)}', 'Api\UsersController@user');
                 $route->get('/users/{user_id:(?:\d+|self)}/angeltypes', 'Api\AngelTypeController@ofUser');
                 $route->get('/users/{user_id:(?:\d+|self)}/shifts', 'Api\ShiftsController@entriesByUser');
@@ -165,6 +178,16 @@ $route->get('/design', 'DesignController@index');
 $route->addGroup(
     '/admin',
     function (RouteCollector $route): void {
+        // Config
+        $route->addGroup(
+            '/config',
+            function (RouteCollector $route): void {
+                $route->get('', 'Admin\\ConfigController@index');
+                $route->get('/{page}', 'Admin\\ConfigController@edit');
+                $route->post('/{page}', 'Admin\\ConfigController@save');
+            }
+        );
+
         // FAQ
         $route->addGroup(
             '/faq',
@@ -242,12 +265,12 @@ $route->addGroup(
         $route->addGroup(
             '/user/{user_id:\d+}',
             function (RouteCollector $route): void {
-                // Shirts
+                // Goodies
                 $route->addGroup(
                     '/goodie',
                     function (RouteCollector $route): void {
-                        $route->get('', 'Admin\\UserShirtController@editShirt');
-                        $route->post('', 'Admin\\UserShirtController@saveShirt');
+                        $route->get('', 'Admin\\UserGoodieController@editGoodie');
+                        $route->post('', 'Admin\\UserGoodieController@saveGoodie');
                     }
                 );
 
@@ -255,15 +278,15 @@ $route->addGroup(
                 $route->addGroup(
                     '/worklog',
                     function (RouteCollector $route): void {
-                        $route->get('[/{worklog_id:\d+}]', 'Admin\\UserWorkLogController@editWorklog');
-                        $route->post('[/{worklog_id:\d+}]', 'Admin\\UserWorkLogController@saveWorklog');
+                        $route->get('[/{worklog_id:\d+}]', 'Admin\\UserWorklogController@editWorklog');
+                        $route->post('[/{worklog_id:\d+}]', 'Admin\\UserWorklogController@saveWorklog');
                         $route->get(
                             '/{worklog_id:\d+}/delete',
-                            'Admin\\UserWorkLogController@showDeleteWorklog'
+                            'Admin\\UserWorklogController@showDeleteWorklog'
                         );
                         $route->post(
                             '/{worklog_id:\d+}/delete',
-                            'Admin\\UserWorkLogController@deleteWorklog'
+                            'Admin\\UserWorklogController@deleteWorklog'
                         );
                     }
                 );

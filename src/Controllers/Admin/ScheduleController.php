@@ -6,7 +6,6 @@ namespace Engelsystem\Controllers\Admin;
 
 use Engelsystem\Controllers\NotificationType;
 use Engelsystem\Helpers\Carbon;
-use DateTimeInterface;
 use Engelsystem\Controllers\BaseController;
 use Engelsystem\Controllers\HasUserNotifications;
 use Engelsystem\Helpers\Schedule\ConferenceTrack;
@@ -22,13 +21,14 @@ use Engelsystem\Models\Shifts\Schedule as ScheduleModel;
 use Engelsystem\Models\Shifts\ScheduleShift;
 use Engelsystem\Models\Shifts\Shift;
 use Engelsystem\Models\Shifts\ShiftType;
-use Engelsystem\Models\User\User;
 use ErrorException;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Database\Connection as DatabaseConnection;
+use Illuminate\Database\Eloquent\Collection as DatabaseCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Psr\Log\LoggerInterface;
 
 class ScheduleController extends BaseController
@@ -56,7 +56,7 @@ class ScheduleController extends BaseController
             'admin/schedule/index',
             [
                 'is_index' => true,
-                'schedules' => ScheduleModel::all(),
+                'schedules' => ScheduleModel::all()->loadCount('shifts'),
             ]
         );
     }
@@ -94,7 +94,7 @@ class ScheduleController extends BaseController
         }
 
         $data = $this->validate($request, [
-            'name' => 'required',
+            'name' => 'required|max:255',
             'url' => 'required',
             'shift_type' => 'required|int',
             'needed_from_shift_type' => 'optional|checked',
@@ -125,12 +125,13 @@ class ScheduleController extends BaseController
         }
 
         $this->log->info(
-            'Schedule {name}: Url {url}, Shift Type {shift_type}, ({need}), '
+            'Schedule {name}: Url {url}, Shift Type {shift_type_name} ({shift_type_id}), ({need}), '
             . 'minutes before/after {before}/{after}, for: {locations}',
             [
                 'name' => $schedule->name,
                 'url' => $schedule->name,
-                'shift_type' => $schedule->shift_type,
+                'shift_type_name' => Shifttype::find($schedule->shift_type)->name,
+                'shift_type_id' => $schedule->shift_type,
                 'need'       => $schedule->needed_from_shift_type ? 'from shift type' : 'from room',
                 'before' => $schedule->minutes_before,
                 'after' => $schedule->minutes_after,
@@ -289,34 +290,15 @@ class ScheduleController extends BaseController
         $this->log->info('Created schedule location "{location}"', ['location' => $room->getName()]);
     }
 
-    protected function fireDeleteShiftEntryEvents(Event $event, ScheduleModel $schedule): void
+    protected function fireDeleteShiftEvents(Event $event, ScheduleModel $schedule): void
     {
-        $shiftEntries = $this->db
-            ->table('shift_entries')
-            ->select([
-                'shift_types.name', 'shifts.title', 'angel_types.name AS type', 'locations.id AS location_id',
-                'shifts.start', 'shifts.end', 'shift_entries.user_id', 'shift_entries.freeloaded',
-            ])
-            ->join('shifts', 'shifts.id', 'shift_entries.shift_id')
-            ->join('schedule_shift', 'shifts.id', 'schedule_shift.shift_id')
-            ->join('locations', 'locations.id', 'shifts.location_id')
-            ->join('angel_types', 'angel_types.id', 'shift_entries.angel_type_id')
-            ->join('shift_types', 'shift_types.id', 'shifts.shift_type_id')
-            ->where('schedule_shift.guid', $event->getGuid())
-            ->where('schedule_shift.schedule_id', $schedule->id)
+        /** @var DatabaseCollection|ScheduleShift[] $scheduleShifts */
+        $scheduleShifts = ScheduleShift::where('guid', $event->getGuid())
+            ->where('schedule_id', $schedule->id)
             ->get();
 
-        foreach ($shiftEntries as $shiftEntry) {
-            event('shift.entry.deleting', [
-                'user' => User::find($shiftEntry->user_id),
-                'start' => Carbon::make($shiftEntry->start),
-                'end' => Carbon::make($shiftEntry->end),
-                'name' => $shiftEntry->name,
-                'title' => $shiftEntry->title,
-                'type' => $shiftEntry->type,
-                'location' => Location::find($shiftEntry->location_id),
-                'freeloaded' => $shiftEntry->freeloaded,
-            ]);
+        foreach ($scheduleShifts as $scheduleShift) {
+            event('shift.deleting', ['shift' => $scheduleShift->shift]);
         }
     }
 
@@ -342,12 +324,15 @@ class ScheduleController extends BaseController
         $scheduleShift->save();
 
         $this->log->info(
-            'Created schedule shift "{shift}" in "{location}" ({from} - {to}, {guid})',
+            'Created schedule ({schedule}) shift: {shifttype} with title '
+            . '"{shift}" in "{location}" ({from} - {to}, {guid})',
             [
+                'schedule' => $scheduleShift->schedule->name,
+                'shifttype' => $shift->shiftType->name,
                 'shift' => $shift->title,
                 'location' => $shift->location->name,
-                'from' => $shift->start->format(DateTimeInterface::RFC3339),
-                'to' => $shift->end->format(DateTimeInterface::RFC3339),
+                'from' => $shift->start->format('Y-m-d H:i'),
+                'to' => $shift->end->format('Y-m-d H:i'),
                 'guid' => $scheduleShift->guid,
             ]
         );
@@ -374,12 +359,15 @@ class ScheduleController extends BaseController
         $this->fireUpdateShiftUpdateEvent($oldShift, $shift);
 
         $this->log->info(
-            'Updated schedule shift "{shift}" in "{location}" ({from} {to}, {guid})',
+            'Updated schedule ({schedule}) shift: {shifttype} with title '
+            . '"{shift}" in "{location}" ({from} - {to}, {guid})',
             [
+                'schedule' => $scheduleShift->schedule->name,
+                'shifttype' => $shift->shiftType->name,
                 'shift' => $shift->title,
                 'location' => $shift->location->name,
-                'from' => $shift->start->format(DateTimeInterface::RFC3339),
-                'to' => $shift->end->format(DateTimeInterface::RFC3339),
+                'from' => $shift->start->format('Y-m-d H:i'),
+                'to' => $shift->end->format('Y-m-d H:i'),
                 'guid' => $scheduleShift->guid,
             ]
         );
@@ -391,17 +379,18 @@ class ScheduleController extends BaseController
         $scheduleShift = ScheduleShift::whereGuid($event->getGuid())->where('schedule_id', $schedule->id)->first();
         $shift = $scheduleShift->shift;
 
-        $this->fireDeleteShiftEntryEvents($event, $schedule);
+        $this->fireDeleteShiftEvents($event, $schedule);
         $shift->delete();
         $scheduleShift->delete();
 
         $this->log->info(
-            'Deleted schedule shift "{shift}" in {location} ({from} {to}, {guid})',
+            'Deleted schedule ({schedule}) shift: "{shift}" in {location} ({from} - {to}, {guid})',
             [
+                'schedule' => $scheduleShift->schedule->name,
                 'shift' => $shift->title,
                 'location' => $shift->location->name,
-                'from' => $shift->start->format(DateTimeInterface::RFC3339),
-                'to' => $shift->end->format(DateTimeInterface::RFC3339),
+                'from' => $shift->start->format('Y-m-d H:i'),
+                'to' => $shift->end->format('Y-m-d H:i'),
                 'guid' => $scheduleShift->guid,
             ]
         );
@@ -447,8 +436,10 @@ class ScheduleController extends BaseController
             throw new ErrorException('schedule.import.read-error');
         }
 
-        $shiftType = $scheduleModel->shift_type;
         $schedule = $this->parser->getSchedule();
+        $schedule = $this->patchSchedule($schedule);
+
+        $shiftType = $scheduleModel->shift_type;
         $minutesBefore = $scheduleModel->minutes_before;
         $minutesAfter = $scheduleModel->minutes_after;
         $newRooms = $this->newRooms($schedule->getRooms());
@@ -574,6 +565,20 @@ class ScheduleController extends BaseController
             '',
             new ConferenceTrack('')
         );
+    }
+
+    protected function patchSchedule(Schedule $schedule): Schedule
+    {
+        foreach ($schedule->getRooms() as $room) {
+            $room->patch('name', Str::substr($room->getName(), 0, 35));
+
+            foreach ($room->getEvents() as $event) {
+                $event->patch('title', Str::substr($event->getTitle(), 0, 255));
+                $event->patch('url', Str::substr((string) $event->getUrl(), 0, 255) ?: null);
+            }
+        }
+
+        return $schedule;
     }
 
     /**

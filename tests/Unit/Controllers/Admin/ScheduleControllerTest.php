@@ -199,16 +199,16 @@ class ScheduleControllerTest extends ControllerTest
     /**
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::save
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::delete
-     * @covers \Engelsystem\Controllers\Admin\ScheduleController::fireDeleteShiftEntryEvents
+     * @covers \Engelsystem\Controllers\Admin\ScheduleController::fireDeleteShiftEvents
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::deleteEvent
      */
     public function testSaveDelete(): void
     {
         $this->setExpects($this->redirect, 'to', ['/admin/schedule'], $this->response);
 
-        $this->event->expects($this->exactly(2))
+        $this->event->expects($this->exactly(3))
             ->method('dispatch')
-            ->with('shift.entry.deleting')
+            ->with('shift.deleting')
             ->willReturn([]);
 
         $request = Request::create('', 'POST', ['delete' => 'yes'])
@@ -222,7 +222,7 @@ class ScheduleControllerTest extends ControllerTest
         $this->assertNull(Schedule::find($this->schedule->id));
 
         $this->assertHasNotification('schedule.delete.success');
-        $this->assertTrue($this->log->hasInfoThatContains('Deleted schedule shift'));
+        $this->assertTrue($this->log->hasInfoThatContains('Deleted schedule ({schedule}) shift'));
         $this->assertTrue($this->log->hasInfoThatContains('Schedule {name}'));
     }
 
@@ -329,6 +329,7 @@ class ScheduleControllerTest extends ControllerTest
     /**
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::importSchedule
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::getScheduleData
+     * @covers \Engelsystem\Controllers\Admin\ScheduleController::patchSchedule
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::newRooms
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::shiftsDiff
      * @covers \Engelsystem\Controllers\Admin\ScheduleController::getScheduleShiftsByGuid
@@ -348,9 +349,9 @@ class ScheduleControllerTest extends ControllerTest
         $request = Request::create('', 'POST')
             ->withAttribute('schedule_id', $this->schedule->id);
 
-        $this->event->expects($this->exactly(2))
+        $this->event->expects($this->exactly(3))
             ->method('dispatch')
-            ->withConsecutive(['shift.updating'], ['shift.entry.deleting'])
+            ->withConsecutive(['shift.updating'], ['shift.deleting'])
             ->willReturn([]);
 
         /** @var ScheduleController $controller */
@@ -361,9 +362,9 @@ class ScheduleControllerTest extends ControllerTest
 
         $this->assertTrue($this->log->hasInfoThatContains('Started schedule'));
         $this->assertTrue($this->log->hasInfoThatContains('Created schedule location'));
-        $this->assertTrue($this->log->hasInfoThatContains('Created schedule shift'));
-        $this->assertTrue($this->log->hasInfoThatContains('Updated schedule shift'));
-        $this->assertTrue($this->log->hasInfoThatContains('Deleted schedule shift'));
+        $this->assertTrue($this->log->hasInfoThatContains('Created schedule ({schedule}) shift'));
+        $this->assertTrue($this->log->hasInfoThatContains('Updated schedule ({schedule}) shift'));
+        $this->assertTrue($this->log->hasInfoThatContains('Deleted schedule ({schedule}) shift'));
         $this->assertTrue($this->log->hasInfoThatContains('Ended schedule'));
 
         $this->assertHasNotification('schedule.import.success');
@@ -373,7 +374,7 @@ class ScheduleControllerTest extends ControllerTest
         $this->assertCount(1, $location);
         $location2 = Location::whereName('Another Room')->get();
         $this->assertCount(1, $location2);
-        $location3 = Location::whereName('Third Room')->get();
+        $location3 = Location::whereName('Third Room with a very looooong tit')->get();
         $this->assertCount(1, $location3);
         /** @var Location $location */
         $location = $location->first();
@@ -415,6 +416,13 @@ class ScheduleControllerTest extends ControllerTest
         $this->assertEquals($location2->id, $shift->location_id);
         $this->assertEquals($this->user->id, $shift->created_by);
         $this->assertNull($shift->updated_by);
+
+        // Truncated shift name
+        /** @var ScheduleShift $scheduleShift */
+        $scheduleShift = ScheduleShift::whereGuid('c6999865-5329-43f2-8aca-85ae39932d09')->first();
+        /** @var Shift $shift */
+        $shift = $scheduleShift->shift;
+        $this->assertStringNotContainsString('such a big thing', $shift->title);
     }
 
     /**

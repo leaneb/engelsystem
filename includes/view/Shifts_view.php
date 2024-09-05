@@ -2,7 +2,6 @@
 
 use Engelsystem\Config\GoodieType;
 use Engelsystem\Helpers\Carbon;
-use Engelsystem\Helpers\Shifts;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\Location;
 use Engelsystem\Models\Shifts\Shift;
@@ -34,7 +33,7 @@ function Shift_view_header(Shift $shift, Location $location)
         div('col-sm-3 col-xs-6', [
             '<h4>' . __('shifts.start') . '</h4>',
             '<p class="lead' . (time() >= $shift->start->timestamp ? ' text-success' : '') . '">',
-            icon('calendar-event') . $shift->start->format(__('general.date')),
+            icon('calendar-event') . dateWithEventDay($shift->start->format('Y-m-d')),
             '<br />',
             icon('clock') . $shift->start->format('H:i'),
             '</p>',
@@ -42,7 +41,7 @@ function Shift_view_header(Shift $shift, Location $location)
         div('col-sm-3 col-xs-6', [
             '<h4>' . __('shifts.end') . '</h4>',
             '<p class="lead' . (time() >= $shift->end->timestamp ? ' text-success' : '') . '">',
-            icon('calendar-event') . $shift->end->format(__('general.date')),
+            icon('calendar-event') . dateWithEventDay($shift->end->format('Y-m-d')),
             '<br />',
             icon('clock') . $shift->end->format('H:i'),
             '</p>',
@@ -156,7 +155,7 @@ function Shift_view(
     $shift_admin = auth()->can('admin_shifts');
     $user_shift_admin = auth()->can('user_shifts_admin');
     $admin_locations = auth()->can('admin_locations');
-    $admin_shifttypes = auth()->can('shifttypes');
+    $admin_shifttypes = auth()->can('shifttypes.view');
     $nightShiftsConfig = config('night_shifts');
     $goodie = GoodieType::from(config('goodie_type'));
     $goodie_enabled = $goodie !== GoodieType::None;
@@ -179,12 +178,17 @@ function Shift_view(
     foreach ($shiftEntry->groupBy('angel_type_id') as $angelTypes) {
         /** @var Collection $angelTypes */
         $type = $angelTypes->first()['angel_type_id'];
+
         if (!$neededAngels->where('angel_type_id', $type)->first()) {
+            // Additionally added angels (not required by shift)
             $needed_angels .= Shift_view_render_needed_angeltype([
                 'angel_type_id' => $type,
                 'count'         => 0,
                 'restricted'    => true,
-                'taken'         => $angelTypes->count(),
+                'taken'         => $shiftEntry
+                    ->where('angel_type_id', $type)
+                    ->where('freeloaded', false)
+                    ->count(),
             ], $angeltypes, $shift, $user_shift_admin);
         }
     }
@@ -269,7 +273,7 @@ function Shift_view(
     $start = $shift->start->format(__('general.datetime'));
 
     $night_shift_hint = '';
-    if (Shifts::isNightShift($shift->start, $shift->end) && $nightShiftsConfig['enabled'] && $goodie_enabled) {
+    if ($shift->isNightShift() && $goodie_enabled) {
         $night_shift_hint = ' <small><span class="bi bi-moon-stars text-info" data-bs-toggle="tooltip" title="'
             . __('Night shifts between %d and %d am are multiplied by %d for the %s score.', [
                 $nightShiftsConfig['start'],

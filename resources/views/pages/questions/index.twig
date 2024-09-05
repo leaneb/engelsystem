@@ -2,14 +2,44 @@
 {% import 'macros/base.twig' as m %}
 {% import 'macros/form.twig' as f %}
 
-{% block title %}{{ __('question.questions') }}{% endblock %}
+{% block title %}
+    {% if is_admin | default(false) %}
+        {{ __('question.admin') }}
+    {% else %}
+        {{ __('question.questions') }}
+    {% endif %}
+{% endblock %}
+
+{% block contact_options %}
+    {% for name,opt in config('contact_options') %}
+        {% set url = opt is iterable ? opt[0] : opt %}
+        {% set permission = opt is iterable ? opt[1] : null %}
+        {% if not permission or can(permission) %}
+            <a href="
+            {%- if url starts with '/' %}
+                {{ url(url) }}
+            {%- else -%}
+                {{ url }}
+            {%- endif %}"
+            {%- if not (url starts with '/') %}
+                target="_blank" rel="noopener"
+            {%- endif %}>
+                {{ __(name) }}
+            </a>{% if not loop.last %},{% endif %}
+        {% endif %}
+    {% endfor %}
+{% endblock %}
 
 {% block content %}
     <div class="container">
         <div class="page-header">
             <h1>
                 {{ block('title') }}
-                {{ m.button(m.icon('plus-lg'), url('/questions/new'), 'secondary') }}
+                {% if is_admin | default(false) %}
+                    {{ m.button(m.icon('question-lg'), url('/faq'), {'title': __('faq.faq')}) }}
+                {% else %}
+                    {{ m.add(url('/questions/new')) }}
+                {% endif %}
             </h1>
         </div>
 
@@ -20,8 +50,19 @@
                 <div class="col-md-12">
                     {% block questions %}
                         {% block faq_text %}
-                            {% if has_permission_to('faq.view') %}
-                                <p>{{ __('question.faq_link', [url('/faq')]) | raw }}</p>
+                            {% if can('faq.view') %}
+                                {% if not is_admin | default(false) %}
+                                    <p>
+                                        {{ __('question.faq_link', [url('/faq')]) | raw }}
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        {% endblock %}
+                        {%- block info_text %}
+                            {% if config('contact_options') and not is_admin|default(false) %}
+                                <p>
+                                    {{ m.info(__('question.contact_options') ~ block('contact_options'), true) }}
+                                </p>
                             {% endif %}
                         {% endblock %}
 
@@ -38,16 +79,16 @@
                                                 {{ m.icon('clock') }} {{ question.created_at.format(__('general.datetime')) }}
                                             </div>
 
-                                            {% if has_permission_to('question.edit') %}
+                                            {% if can('question.edit') %}
                                                 {{ m.user(question.user, {'pronoun': true}) }}
                                             {% endif %}
 
                                             <div class="d-flex ms-auto">
-                                                {% if has_permission_to('question.edit') %}
-                                                    {{ m.button(m.icon('pencil'), url('/admin/questions/' ~ question.id), null, 'sm', __('form.edit')) }}
+                                                {% if can('question.edit') %}
+                                                    {{ m.edit(url('/admin/questions/' ~ question.id)) }}
                                                 {% endif %}
 
-                                                {% if question.user.id == user.id or has_permission_to('question.edit') %}
+                                                {% if question.user.id == user.id or can('question.edit') %}
                                                     <form class="ps-1" method="post" action="">
                                                         {{ csrf() }}
                                                         {{ f.hidden('id', question.id) }}

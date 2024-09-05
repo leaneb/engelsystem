@@ -1,5 +1,7 @@
 <?php
 
+use Engelsystem\Http\Exceptions\HttpForbidden;
+use Engelsystem\Http\Exceptions\HttpNotFound;
 use Engelsystem\Mail\EngelsystemMailer;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\User\User;
@@ -38,19 +40,18 @@ function user_angeltypes_unconfirmed_hint()
         $unconfirmed_links[] = '<a href="'
             . url('/angeltypes', ['action' => 'view', 'angeltype_id' => $user_angeltype->angel_type_id])
             . '">' . htmlspecialchars($user_angeltype->angelType->name)
-            . ' (+' . $user_angeltype->count . ')'
+            . ' (+' . $user_angeltype->users_count . ')'
             . '</a>';
     }
 
     $count = $unconfirmed_user_angeltypes->count();
     return
         _e(
-            'There is %d unconfirmed angeltype.',
-            'There are %d unconfirmed angeltypes.',
+            'There are unconfirmed angels in %d angel type. Angel type that needs approval:',
+            'There are unconfirmed angels in %d angel types. Angel types that need approvals:',
             $count,
             [$count]
         )
-        . ' ' . __('Angel types which need approvals:')
         . ' ' . join(', ', $unconfirmed_links);
 }
 
@@ -70,7 +71,7 @@ function user_angeltypes_delete_all_controller(): array
 
     $angeltype = AngelType::findOrFail($request->input('angeltype_id'));
     if (!auth()->user()->isAngelTypeSupporter($angeltype) && !auth()->can('admin_user_angeltypes')) {
-        error(__('You are not allowed to delete all users for this angeltype.'));
+        error(__('You are not allowed to delete all users for this angel type.'));
         throw_redirect(url('/angeltypes'));
     }
 
@@ -79,8 +80,8 @@ function user_angeltypes_delete_all_controller(): array
             ->whereNull('confirm_user_id')
             ->delete();
 
-        engelsystem_log(sprintf('Denied all users for angeltype %s', AngelType_name_render($angeltype, true)));
-        success(sprintf(__('Denied all users for angeltype %s.'), $angeltype->name));
+        engelsystem_log(sprintf('Denied all users for angel type %s', AngelType_name_render($angeltype, true)));
+        success(sprintf(__('Denied all users for angel type %s.'), $angeltype->name));
         throw_redirect(url('/angeltypes', ['action' => 'view', 'angeltype_id' => $angeltype->id]));
     }
 
@@ -107,7 +108,7 @@ function user_angeltypes_confirm_all_controller(): array
 
     $angeltype = AngelType::findOrFail($request->input('angeltype_id'));
     if (!auth()->can('admin_user_angeltypes') && !$user->isAngelTypeSupporter($angeltype)) {
-        error(__('You are not allowed to confirm all users for this angeltype.'));
+        error(__('You are not allowed to confirm all users for this angel type.'));
         throw_redirect(url('/angeltypes'));
     }
 
@@ -118,8 +119,8 @@ function user_angeltypes_confirm_all_controller(): array
             ->whereNull('confirm_user_id')
             ->update(['confirm_user_id' => $user->id]);
 
-        engelsystem_log(sprintf('Confirmed all users for angeltype %s', AngelType_name_render($angeltype, true)));
-        success(sprintf(__('Confirmed all users for angeltype %s.'), $angeltype->name));
+        engelsystem_log(sprintf('Confirmed all users for angel type %s', AngelType_name_render($angeltype, true)));
+        success(sprintf(__('Confirmed all users for angel type %s.'), $angeltype->name));
 
         foreach ($users as $user) {
             user_angeltype_confirm_email($user, $angeltype);
@@ -145,15 +146,14 @@ function user_angeltype_confirm_controller(): array
     $request = request();
 
     if (!$request->has('user_angeltype_id')) {
-        error(__('User angeltype doesn\'t exist.'));
-        throw_redirect(url('/angeltypes'));
+        throw new HttpNotFound();
     }
 
     /** @var UserAngelType $user_angeltype */
     $user_angeltype = UserAngelType::findOrFail($request->input('user_angeltype_id'));
     $angeltype = $user_angeltype->angelType;
     if (!$user->isAngelTypeSupporter($angeltype) && !auth()->can('admin_user_angeltypes')) {
-        error(__('You are not allowed to confirm this users angeltype.'));
+        error(__('You are not allowed to confirm this users angel type.'));
         throw_redirect(url('/angeltypes'));
     }
 
@@ -163,11 +163,11 @@ function user_angeltype_confirm_controller(): array
         $user_angeltype->save();
 
         engelsystem_log(sprintf(
-            '%s confirmed for angeltype %s',
+            '%s confirmed for angel type %s',
             User_Nick_render($user_source, true),
             AngelType_name_render($angeltype, true)
         ));
-        success(sprintf(__('%s confirmed for angeltype %s.'), $user_source->displayName, $angeltype->name));
+        success(sprintf(__('%s confirmed for angel type %s.'), $user_source->displayName, $angeltype->name));
 
         user_angeltype_confirm_email($user_source, $angeltype);
 
@@ -175,7 +175,7 @@ function user_angeltype_confirm_controller(): array
     }
 
     return [
-        __('Confirm angeltype for user'),
+        __('Confirm angel type for user'),
         UserAngelType_confirm_view($user_angeltype, $user_source, $angeltype),
     ];
 }
@@ -223,35 +223,35 @@ function user_angeltype_delete_controller(): array
     $user = auth()->user();
 
     if (!$request->has('user_angeltype_id')) {
-        error(__('User angeltype doesn\'t exist.'));
-        throw_redirect(url('/angeltypes'));
+        throw new HttpNotFound();
     }
 
     /** @var UserAngelType $user_angeltype */
     $user_angeltype = UserAngelType::findOrFail($request->input('user_angeltype_id'));
     $angeltype = $user_angeltype->angelType;
     $user_source = $user_angeltype->user;
+    $isOwnAngelType = $user->id == $user_source->id;
     if (
-        $user->id != $user_angeltype->user_id
+        !$isOwnAngelType
         && !$user->isAngelTypeSupporter($angeltype)
         && !auth()->can('admin_user_angeltypes')
     ) {
-        error(__('You are not allowed to delete this users angeltype.'));
+        error(__('You are not allowed to delete this users angel type.'));
         throw_redirect(url('/angeltypes'));
     }
 
     if ($request->hasPostData('delete')) {
         $user_angeltype->delete();
 
-        engelsystem_log(sprintf('User %s removed from %s.', User_Nick_render($user_source, true), $angeltype->name));
-        success(sprintf(__('User %s removed from %s.'), $user_source->displayName, $angeltype->name));
+        engelsystem_log(sprintf('User "%s" removed from "%s".', User_Nick_render($user_source, true), $angeltype->name));
+        success(sprintf($isOwnAngelType ? __('You successfully left "%2$s".') : __('User "%s" removed from "%s".'), $user_source->displayName, $angeltype->name));
 
         throw_redirect(url('/angeltypes', ['action' => 'view', 'angeltype_id' => $angeltype->id]));
     }
 
     return [
-        __('Remove angeltype'),
-        UserAngelType_delete_view($user_angeltype, $user_source, $angeltype),
+        __('Leave angel type'),
+        UserAngelType_delete_view($user_angeltype, $user_source, $angeltype, $isOwnAngelType),
     ];
 }
 
@@ -265,14 +265,11 @@ function user_angeltype_update_controller(): array
     $supporter = false;
     $request = request();
 
-    if (!auth()->can('admin_angel_types') && !config('supporters_can_promote')) {
-        error(__('You are not allowed to set supporter rights.'));
-        throw_redirect(url('/angeltypes'));
-    }
-
     if (!$request->has('user_angeltype_id')) {
-        error(__('User angeltype doesn\'t exist.'));
-        throw_redirect(url('/angeltypes'));
+        throw new HttpNotFound();
+    }
+    if (!auth()->can('admin_angel_types') && !config('supporters_can_promote')) {
+        throw new HttpForbidden();
     }
 
     if ($request->has('supporter') && preg_match('/^[01]$/', $request->input('supporter'))) {
@@ -329,8 +326,29 @@ function user_angeltype_add_controller(): array
     // Default selection
     $user_source = auth()->user();
 
-    // Load possible users, that are not in the angeltype already
-    $users_source = Users_by_angeltype_inverted($angeltype);
+    // Load all users with userAngelTypes
+    /** @var Collection|User[] $users */
+    $users = User::with('userAngelTypes')->orderBy('name')->get();
+
+    // Add membership state to displayname
+    $users_select = [];
+    foreach ($users as $user) {
+        $name = $user->displayName;
+        /** @var AngelType|null $userAngelType */
+        $userAngelType = $user->userAngelTypes->where('id', $angeltype->id)->first();
+        if ($userAngelType) {
+            $membershipState = __('Member');
+            if ($userAngelType->pivot->supporter) {
+                $membershipState = __('Supporter');
+            } elseif (
+                !$userAngelType->pivot->isConfirmed
+            ) {
+                $membershipState = __('Unconfirmed');
+            }
+            $name = __('%s (%s)', [$name, $membershipState]);
+        }
+        $users_select[$user->id] = $name;
+    }
 
     $request = request();
     if ($request->hasPostData('submit')) {
@@ -367,8 +385,8 @@ function user_angeltype_add_controller(): array
     }
 
     return [
-        __('Add user to angeltype'),
-        UserAngelType_add_view($angeltype, $users_source, $user_source->id),
+        __('Add user to angel type'),
+        UserAngelType_add_view($angeltype, $users_select, $user_source->id),
     ];
 }
 

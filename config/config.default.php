@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-// To change settings create a config.php
+// To change or overwrite some settings, create a config.php
 
 return [
     // MySQL-Connection Settings
     'database'                => [
-        'host'     => env('MYSQL_HOST', (env('CI', false) ? 'mariadb' : 'localhost')),
+        'host'     => env('MYSQL_HOST', 'localhost'),
         'database' => env('MYSQL_DATABASE', 'engelsystem'),
         'username' => env('MYSQL_USER', 'root'),
-        'password' => env('MYSQL_PASSWORD', ''),
+        'password' => env_secret('MYSQL_PASSWORD', ''),
     ],
 
     // For accessing /metrics (and /stats)
     'api_key'                 => env('API_KEY', ''),
 
-    // Enable maintenance mode (show a static page)
+    // Enable maintenance mode (show a static page to all users)
     'maintenance'             => (bool) env('MAINTENANCE', false),
 
     // Application name (not the event name)
@@ -26,42 +26,49 @@ return [
     'environment'             => env('ENVIRONMENT', 'production'),
 
     // Application URL and base path to use instead of the auto-detected one
-    'url'                     => env('APP_URL', null),
+    'url'                     => env('APP_URL'),
 
     // Header links
     // Available link placeholders: %lang%
-    // To disable a header_item in the config.php, you can set its value to null
+    // To disable a header_item in config.php, you can set its value to null
     'header_items'            => [
-        // Name can be a translation string, permission is a engelsystem privilege
+        // Name can be a translation string, permission is an engelsystem privilege
         // 'Name' => 'URL',
-        // 'Name' => ['URL', 'permission'],
+        // 'some.key' => ['URL', 'permission'],
 
         //'Foo' => ['https://foo.bar/batz-%lang%.html', 'logout'], // Permission: for logged-in users
     ],
 
     // Footer links
-    // To disable a footer item in the config.php, you can set its value to null
+    // To disable a footer item in config.php, you can set its value to null
     'footer_items'            => [
         // Name can be a translation string, permission is a engelsystem privilege
         // 'Name' => 'URL',
-        // 'Name' => ['URL', 'permission'],
+        // 'some.key' => ['URL', 'permission'],
 
-        // URL to the angel faq and job description
+        // URL to faq page
         'faq.faq' => [env('FAQ_URL', '/faq'), 'faq.view'],
 
         // Contact email address, linked on every page
         'Contact' => env('CONTACT_EMAIL', 'mailto:ticket@c3heaven.de'),
     ],
 
-    // Text displayed on the FAQ page, rendered as markdown
-    'faq_text'                => env('FAQ_TEXT', null),
+    // Other ways to ask the heaven
+    // Multiple contact options / links are possible, analogue to footer_items
+    'contact_options' => [
+        // E-mail address
+        'general.email' => env('CONTACT_EMAIL', 'mailto:ticket@c3heaven.de'),
+    ],
+
+    // Additional text displayed on the FAQ page, rendered as markdown
+    'faq_text'                => env('FAQ_TEXT'),
 
     // Link to documentation/help
     'documentation_url'       => env('DOCUMENTATION_URL', 'https://engelsystem.de/doc/'),
 
     // Email config
     'email'                   => [
-        // Can be mail, smtp, sendmail or log or an symfony mailer dsn string like smtps://[usr]:[pass]@smtp.foo.bar:465
+        // Can be mail, smtp, sendmail, log or an symfony mailer dsn string like smtps://[usr]:[pass]@smtp.foo.bar:465
         'driver' => env('MAIL_DRIVER', 'mail'),
         'from'   => [
             // From address of all emails
@@ -71,19 +78,23 @@ return [
 
         'host'       => env('MAIL_HOST', 'localhost'),
         'port'       => env('MAIL_PORT', 587),
-        // If tls transport encryption should be used
-        'tls'        => env('MAIL_TLS', null),
+        // If tls transport encryption should be enabled
+        'tls'        => env('MAIL_TLS'),
         'username'   => env('MAIL_USERNAME'),
-        'password'   => env('MAIL_PASSWORD'),
+        'password'   => env_secret('MAIL_PASSWORD'),
         'sendmail'   => env('MAIL_SENDMAIL', '/usr/sbin/sendmail -bs'),
     ],
 
-    # Your privacy@ contact address
-    'privacy_email' => env('PRIVACY_EMAIL', null),
+    // Your privacy@ contact address
+    'privacy_email' => env('PRIVACY_EMAIL'),
 
-    // Initial admin password
-    'setup_admin_password'    => env('SETUP_ADMIN_PASSWORD', null),
+    // Show opt-in on user profile and registration pages to save some personal data after the event
+    'enable_email_goodie' => (bool) env('ENABLE_EMAIL_GOODIE', false),
 
+    // Initial admin password, configured on first migration
+    'setup_admin_password'    => env_secret('SETUP_ADMIN_PASSWORD'),
+
+    // Setup external authentication providers
     'oauth'                   => [
         // '[name]' => [config]
         /*
@@ -131,18 +142,18 @@ return [
             'groups' => 'groups',
             // Groups to team (angeltype) mapping (optional)
             'teams' => [
-                '/Lorem' => 4, // 4 being the ID of the angeltype
-                '/Foo Mod' => ['id' => 5, 'supporter' => true], // 5 being the ID of the angeltype
+                '/Lorem' => 4, // 4 being the ID of the team (angeltype)
+                '/Foo Mod' => ['id' => 5, 'supporter' => true], // 5 being the ID of the team (angeltype)
             ],
         ],
         */
     ],
 
-    // Default theme, 1=style1.css
+    // Default theme, 1 = theme1.scss etc.
     'theme'                   => env('THEME', 1),
 
     // Supported themes
-    // To disable a theme in the config.php, you can set its value to null
+    // To disable a theme in config.php, you can set its value to null
     'themes' => [
         17 => [
             'name' => 'Engelsystem 37c3 (2023)',
@@ -236,7 +247,7 @@ return [
         ],
     ],
 
-    // Redirect to this site after logging in or when pressing the top-left button
+    // Redirect to this site after logging in or when clicking the page name
     // Must be one of news, meetings, user_shifts, angeltypes, questions
     'home_site'               => env('HOME_SITE', 'news'),
 
@@ -245,6 +256,9 @@ return [
 
     // Users are able to sign up
     'registration_enabled'    => (bool) env('REGISTRATION_ENABLED', true),
+
+    // URL to external registration page, linked from login page
+    'external_registration_url'   => env('EXTERNAL_REGISTRATION_URL'),
 
     // Required user fields
     'required_user_fields' => [
@@ -256,13 +270,13 @@ return [
         'dect'               => (bool) env('DECT_REQUIRED', false),
     ],
 
-    // Only arrived angels can sign up for shifts
+    // Only arrived users can sign up for shifts
     'signup_requires_arrival' => (bool) env('SIGNUP_REQUIRES_ARRIVAL', false),
 
-    // Whether newly-registered user should automatically be marked as arrived
-    'autoarrive'              => (bool) env('ANGEL_AUTOARRIVE', false),
+    // Whether newly-registered users should automatically be marked as arrived
+    'autoarrive'              => (bool) env('AUTOARRIVE', false),
 
-    // Supporters of an angeltype can promote other angels of the angeltype to supporter
+    // Supporters of a team (angeltype) can promote other users of the team (angeltype) to supporter
     'supporters_can_promote' => (bool) env('SUPPORTERS_CAN_PROMOTE', false),
 
     // Only allow shift signup this number of hours in advance
@@ -270,56 +284,58 @@ return [
     'signup_advance_hours'    => env('SIGNUP_ADVANCE_HOURS', 0),
 
     // Allow signup this many minutes after the start of the shift.
-    // If signup_post_fraction is set, first applies that before adding the number of minutes specified by this.
+    // If signup_post_fraction is set, it's first applied before adding the number of minutes specified here.
     'signup_post_minutes'     => env('SIGNUP_POST_MINUTES', 0),
 
     // Allow signup this fraction of the shift length after the start of the shift.
-    // Example: If this is set to 1, signup is allowed until the end of a shift
-    //          If this is set to 0.5, signup is allowd for the first half of a shift
-    // If signup_post_minutes is set, first applies this and then adds the signup_post_minutes on top.
+    // Example: If it is set to 1, signup is allowed until the end of a shift
+    //          If it is set to 0.5, signup is allowed for the first half of a shift
+    // If signup_post_minutes is set, this is first applied and then the signup_post_minutes added on top.
     'signup_post_fraction'    => env('SIGNUP_POST_FRACTION', 0),
 
-    // Number of hours that an angel has to sign out own shifts
+    // Number of hours that a user can sign out of own shifts beforehand
     'last_unsubscribe'        => env('LAST_UNSUBSCRIBE', 3),
 
     // Define the algorithm to use for `password_verify()`
-    // If the user uses an old algorithm the password will be converted to the new format
+    // If a user password is hashed with an old algorithm, the password will be converted to the new format on login
     // See https://secure.php.net/manual/en/password.constants.php for a complete list
     'password_algorithm'      => env('PASSWORD_ALGORITHM', PASSWORD_DEFAULT),
 
     // The minimum length for passwords
-    'min_password_length'     => env('PASSWORD_MINIMUM_LENGTH', 8),
+    'password_min_length'     => env('PASSWORD_MIN_LENGTH', 8),
 
-    // Whether the Password field should be enabled on registration.
-    // This is useful when using oauth, disabling it also disables normal
-    // registration without oauth.
+    // Whether the login and registration via password should be enabled (login will be hidden if false)
+    // This is useful when using oauth, disabling it also disables normal registration without oauth
     'enable_password'         => (bool) env('ENABLE_PASSWORD', true),
 
     // Whether the DECT field should be enabled
     'enable_dect'             => (bool) env('ENABLE_DECT', true),
 
-    // Whether the mobile number can be shown to other users
+    // Whether the mobile number will be shown to other users
     'enable_mobile_show'      => (bool) env('ENABLE_MOBILE_SHOW', false),
 
     // Regular expression describing a FALSE username.
     // Per default usernames must only contain alphanumeric chars, "-", "_" or ".".
     'username_regex' => (string) env('USERNAME_REGEX', '/([^\p{L}\p{N}_.-]+)/ui'),
 
-    // Enables first name and last name
-    'enable_user_name'        => (bool) env('ENABLE_USER_NAME', false),
+    // Enable first name and last name
+    'enable_full_name'        => (bool) env('ENABLE_FULL_NAME', false),
 
     // Show a users first name and last name instead of username
     'display_full_name'  => env('DISPLAY_FULL_NAME', false)
-        && env('ENABLE_USER_NAME', false),
+        && env('ENABLE_FULL_NAME', false),
 
     // Enable displaying the pronoun fields
     'enable_pronoun'          => (bool) env('ENABLE_PRONOUN', true),
 
-    // Enables the planned arrival/leave date
+    // Enable the planned arrival/leave date
     'enable_planned_arrival'  => (bool) env('ENABLE_PLANNED_ARRIVAL', true),
 
     // Whether force active should be enabled
     'enable_force_active' => (bool) env('ENABLE_FORCE_ACTIVE', true),
+
+    // Allow users with sufficient permission to add worklogs for themselves
+    'enable_self_worklog' => (bool) env('ENABLE_SELF_WORKLOG', true),
 
     // Resembles the Goodie Type. There are three options:
     // 'none' => no goodie at all
@@ -327,10 +343,10 @@ return [
     // 'tshirt' => goodie that is called tshirt and has sizing options
     'goodie_type'             => env('GOODIE_TYPE', 'goodie'),
 
-    // Enables the food voucher in the user profile
+    // Enable (food) vouchers
     'enable_voucher'          => (bool) env('ENABLE_VOUCHER', true),
 
-    // Number of shifts to freeload until angel is locked for shift signup.
+    // Number of shifts to freeload until a user is locked from shift signup.
     'max_freeloadable_shifts' => env('MAX_FREELOADABLE_SHIFTS', 2),
 
     // Hide columns in backend user view. Possible values are any sortable parameters of the table.
@@ -339,11 +355,12 @@ return [
     // Local timezone
     'timezone'                => env('TIMEZONE', 'Europe/Berlin'),
 
-    // Multiply 'night shifts' and freeloaded shifts (start or end between 2 and 6 exclusive) by 2
+    // Multiply 'night shifts' and freeloaded shifts (start or end between 2 and 8 exclusive) by 2 in goodie score
+    // Goodies must be enabled to use this feature
     'night_shifts'            => [
         'enabled'    => (bool) env('NIGHT_SHIFTS', true), // Disable to weigh every shift the same
-        'start'      => env('NIGHT_SHIFTS_START', 2),
-        'end'        => env('NIGHT_SHIFTS_END', 8),
+        'start'      => env('NIGHT_SHIFTS_START', 2), // Starting from hour
+        'end'        => env('NIGHT_SHIFTS_END', 8), // Ends at (without including) hour
         'multiplier' => env('NIGHT_SHIFTS_MULTIPLIER', 2),
     ],
 
@@ -353,18 +370,20 @@ return [
         'shifts_per_voucher' => env('SHIFTS_PER_VOUCHER', 0),
         'hours_per_voucher'  => env('HOURS_PER_VOUCHER', 2),
         // 'Y-m-d' formatted
-        'voucher_start'      => env('VOUCHER_START', null) ?: null,
+        'voucher_start'      => env('VOUCHER_START') ?: null,
     ],
+
+    // Enable Driving License
+    'driving_license_enabled' => (bool) env('DRIVING_LICENSE_ENABLED', true),
 
     # Instruction in accordance with § 43 Para. 1 of the German Infection Protection Act (IfSG)
     'ifsg_enabled'           => (bool) env('IFSG_ENABLED', false),
 
     # Instruction only onsite in accordance with § 43 Para. 1 of the German Infection Protection Act (IfSG)
-    'ifsg_light_enabled'           => (bool) env('IFSG_LIGHT_ENABLED', false)
-        && env('IFSG_ENABLED', false),
+    'ifsg_light_enabled'           => env('IFSG_LIGHT_ENABLED', false) && env('IFSG_ENABLED', false),
 
     // Available locales in /resources/lang/
-    // To disable a locale in the config.php, you can set its value to null
+    // To disable a locale in config.php, you can set its value to null
     'locales'                 => [
         'de_DE' => 'Deutsch',
         'en_US' => 'English',
@@ -374,7 +393,7 @@ return [
     'default_locale'          => env('DEFAULT_LOCALE', 'en_US'),
 
     // Available T-Shirt sizes
-    // To disable a t-shirt size in the config.php, you can set its value to null
+    // To disable a t-shirt size in config.php, you can set its value to null
     'tshirt_sizes'            => [
         'S'    => 'Small Straight-Cut',
         'S-F'  => 'Small Fitted-Cut',
@@ -390,13 +409,13 @@ return [
     ],
 
     // T-shirt Size-Guide link
-    'tshirt_link' => env('TSHIRT_LINK', null),
+    'tshirt_link' => env('TSHIRT_LINK'),
 
     // Whether to show the current day of the event (-2, -1, 0, 1, 2…) in footer and on the dashboard.
     // The event start date has to be set for it to appear.
-    'enable_show_day_of_event' => false,
+    'enable_day_of_event' => (bool) env('ENABLE_DAY_OF_EVENT', false),
     // If true there will be a day 0 (-1, 0, 1…). If false there won't (-1, 1…)
-    'event_has_day0' => true,
+    'event_has_day0' => (bool) env('EVENT_HAS_DAY0', true),
 
     'metrics'                 => [
         // User work buckets in seconds
@@ -427,7 +446,7 @@ return [
     // Add additional headers
     'add_headers'             => (bool) env('ADD_HEADERS', true),
     // Predefined headers
-    // To disable a header in the config.php, you can set its value to null
+    // To disable a header in config.php, you can set its value to null
     'headers'                 => [
         'X-Content-Type-Options'  => 'nosniff',
         'X-Frame-Options'         => 'sameorigin',

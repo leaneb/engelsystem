@@ -48,7 +48,11 @@ class RegistrationController extends BaseController
         $rawData = $request->getParsedBody();
         $user = $this->userFactory->createFromData($rawData);
 
-        $this->addNotification('registration.successful');
+        if (!$this->auth->user()) {
+            $this->addNotification('registration.successful');
+        } else {
+            $this->addNotification('registration.successful.supporter');
+        }
 
         if ($this->config->get('welcome_msg')) {
             // Set a session marker to display the welcome message on the next page
@@ -89,7 +93,7 @@ class RegistrationController extends BaseController
         return $this->response->withView(
             'pages/registration',
             [
-                'minPasswordLength' => $this->config->get('min_password_length'),
+                'minPasswordLength' => $this->config->get('password_min_length'),
                 'tShirtSizes' => $this->config->get('tshirt_sizes'),
                 'tShirtLink' => $this->config->get('tshirt_link'),
                 'angelTypes' => AngelType::whereHideRegister(false)->get(),
@@ -99,10 +103,10 @@ class RegistrationController extends BaseController
                 'isPasswordEnabled' => $this->userFactory->determineIsPasswordEnabled(),
                 'isDECTEnabled' => $this->config->get('enable_dect'),
                 'isShowMobileEnabled' => $this->config->get('enable_mobile_show'),
-                'isGoodieEnabled' => $goodieType !== GoodieType::None,
+                'isGoodieEnabled' => $goodieType !== GoodieType::None && config('enable_email_goodie'),
                 'isGoodieTShirt' => $goodieType === GoodieType::Tshirt,
                 'isPronounEnabled' => $this->config->get('enable_pronoun'),
-                'isFullNameEnabled' => $this->config->get('enable_user_name'),
+                'isFullNameEnabled' => $this->config->get('enable_full_name'),
                 'isPlannedArrivalDateEnabled' => $this->config->get('enable_planned_arrival'),
                 'isPronounRequired' => $requiredFields['pronoun'],
                 'isFirstnameRequired' => $requiredFields['firstname'],
@@ -115,7 +119,7 @@ class RegistrationController extends BaseController
     }
 
     /**
-     * @return Array<string, 1> Checkbox field name/Id →  1
+     * @return Array<string, 1> Checkbox field name/id →  1
      */
     private function determinePreselectedAngelTypes(): array
     {

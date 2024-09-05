@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
  */
 function shifts_title()
 {
-    return __('Shifts');
+    return __('general.shifts');
 }
 
 /**
@@ -179,7 +179,7 @@ function load_types()
     $isShico = auth()->can('admin_shifts');
 
     if (!AngelType::count()) {
-        error(__('The administration has not configured any angeltypes yet - or you are not subscribed to any angeltype.'));
+        error(__('The administration has not configured any angel types yet - or you are not subscribed to any angel type.'));
         throw_redirect(url('/'));
     }
 
@@ -326,7 +326,7 @@ function view_user_shifts()
                     'types',
                     icon('person-lines-fill') . __('angeltypes.angeltypes')
                     . ' <small><span class="bi bi-info-circle-fill text-info" data-bs-toggle="tooltip" title="'
-                    . __('The tasks shown here are influenced by the angeltypes you joined already!')
+                    . __('The tasks shown here are influenced by the angel types you joined already!')
                     . '"></span></small>',
                     $ownAngelTypes
                 ),
@@ -374,18 +374,11 @@ function ical_hint()
 
     return heading(__('iCal export and API') . ' ' . button_help('user/ical'), 2)
         . '<p>' . sprintf(
-            __('Export your own shifts. <a href="%s" target="_blank">iCal format</a> or <a href="%s" target="_blank">JSON format</a> available (please keep secret, otherwise <a href="%s">reset the api key</a>).'),
+            __('Export your own shifts formatted as <a href="%s" target="_blank">iCal</a> or <a href="%s" target="_blank">JSON</a> (please keep the link secret, otherwise you have to reset the api key <a href="%s">in your settings</a>).'),
             url('/ical', ['key' => $user->api_key]),
             url('/shifts-json-export', ['key' => $user->api_key]),
-            url('/user-myshifts', ['reset' => 1])
-        )
-        . ' <button class="btn btn-sm btn-danger" type="button"
-            data-bs-toggle="collapse" data-bs-target="#collapseApiKey"
-            aria-expanded="false" aria-controls="collapseApiKey">
-            ' . __('Show API Key') . '
-            </button>'
-        . '</p>'
-        . '<p id="collapseApiKey" class="collapse"><code>' . $user->api_key . '</code></p>';
+            url('/settings/api')
+        ) . '</p>';
 }
 
 /**

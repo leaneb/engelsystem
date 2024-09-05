@@ -194,7 +194,7 @@ function Shifts_by_ShiftsFilter(ShiftsFilter $shiftsFilter)
         $shifts[] = (new Shift())->forceFill($shift);
     }
 
-    $shifts->load(['location', 'shiftType']);
+    $shifts->load(['location', 'shiftType', 'shiftEntries.angelType']);
 
     return $shifts;
 }
@@ -430,14 +430,6 @@ function Shift_signup_allowed_angel(
 ) {
     $free_entries = Shift_free_entries($needed_angeltype, $shift_entries);
 
-    if (config('signup_requires_arrival') && !$user->state->arrived) {
-        return new ShiftSignupState(ShiftSignupStatus::NOT_ARRIVED, $free_entries);
-    }
-
-    if (config('signup_advance_hours') && $shift->start->timestamp > time() + config('signup_advance_hours') * 3600) {
-        return new ShiftSignupState(ShiftSignupStatus::NOT_YET, $free_entries);
-    }
-
     if (is_null($user_shifts) || $user_shifts->isEmpty()) {
         $user_shifts = Shifts_by_user($user->id);
     }
@@ -487,6 +479,14 @@ function Shift_signup_allowed_angel(
     if (Shift_collides($shift, $user_shifts)) {
         // you cannot join if user already joined a parallel of this shift
         return new ShiftSignupState(ShiftSignupStatus::COLLIDES, $free_entries);
+    }
+
+    if (config('signup_advance_hours') && $shift->start->timestamp > time() + config('signup_advance_hours') * 3600) {
+        return new ShiftSignupState(ShiftSignupStatus::NOT_YET, $free_entries);
+    }
+
+    if (config('signup_requires_arrival') && !$user->state->arrived) {
+        return new ShiftSignupState(ShiftSignupStatus::NOT_ARRIVED, $free_entries);
     }
 
     // Hooray, shift is free for you!
@@ -548,8 +548,7 @@ function Shift_signout_allowed(Shift $shift, AngelType $angeltype, $signout_user
 
     // angeltype supporter can sign out any user at any time from their supported angeltype
     if (
-        auth()->can('shiftentry_edit_angeltype_supporter')
-        && ($user->isAngelTypeSupporter($angeltype) || auth()->can('admin_user_angeltypes'))
+        $user->isAngelTypeSupporter($angeltype) || auth()->can('admin_user_angeltypes')
     ) {
         return true;
     }
@@ -587,8 +586,7 @@ function Shift_signup_allowed(
     }
 
     if (
-        auth()->can('shiftentry_edit_angeltype_supporter')
-        && (auth()->user()->isAngelTypeSupporter($angeltype) || auth()->can('admin_user_angeltypes'))
+        auth()->user()->isAngelTypeSupporter($angeltype) || auth()->can('admin_user_angeltypes')
     ) {
         return Shift_signup_allowed_angeltype_supporter($needed_angeltype, $shift_entries);
     }

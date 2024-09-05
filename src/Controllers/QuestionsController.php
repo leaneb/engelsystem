@@ -40,7 +40,7 @@ class QuestionsController extends BaseController
             ->load(['user.state', 'answerer.state']);
 
         return $this->response->withView(
-            'pages/questions/overview.twig',
+            'pages/questions/index.twig',
             ['questions' => $questions]
         );
     }
@@ -58,7 +58,7 @@ class QuestionsController extends BaseController
         $data = $this->validate(
             $request,
             [
-                'id'     => 'int|required',
+                'id'     => 'required|int',
                 'delete' => 'checked',
             ]
         );

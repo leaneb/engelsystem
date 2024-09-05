@@ -2,28 +2,25 @@
 
 use Carbon\Carbon;
 use Engelsystem\Database\Db;
-use Engelsystem\Models\AngelType;
 use Engelsystem\Models\User\User;
 use Engelsystem\Models\Worklog;
-use Illuminate\Database\Query\JoinClause;
-use Illuminate\Support\Collection;
 
 /**
  * User model
  */
 
 /**
- * Returns the tshirt score (number of hours counted for tshirt).
+ * Returns the goodie score (number of hours counted for tshirt).
  * Accounts only ended shifts.
  *
  * @param int $userId
- * @return int
+ * @return float
  */
-function User_tshirt_score($userId)
+function User_goodie_score(int $userId): float
 {
     $shift_sum_formula = User_get_shifts_sum_query();
     $result_shifts = Db::selectOne(sprintf('
-        SELECT ROUND((%s) / 3600, 2) AS `tshirt_score`
+        SELECT ROUND((%s) / 3600, 2) AS `goodie_score`
         FROM `users` LEFT JOIN `shift_entries` ON `users`.`id` = `shift_entries`.`user_id`
         LEFT JOIN `shifts` ON `shift_entries`.`shift_id` = `shifts`.`id`
         WHERE `users`.`id` = ?
@@ -32,8 +29,8 @@ function User_tshirt_score($userId)
     ', $shift_sum_formula), [
         $userId,
     ]);
-    if (!isset($result_shifts['tshirt_score'])) {
-        $result_shifts = ['tshirt_score' => 0];
+    if (!isset($result_shifts['goodie_score'])) {
+        $result_shifts = ['goodie_score' => 0];
     }
 
     $worklogHours = Worklog::query()
@@ -41,29 +38,7 @@ function User_tshirt_score($userId)
         ->where('worked_at', '<=', Carbon::Now())
         ->sum('hours');
 
-    return $result_shifts['tshirt_score'] + $worklogHours;
-}
-
-/**
- * Returns all users that are not member of given angeltype.
- *
- * @param AngelType $angeltype Angeltype
- *
- * @return User[]|Collection
- */
-function Users_by_angeltype_inverted(AngelType $angeltype)
-{
-    return User::query()
-        ->select('users.*')
-        ->leftJoin('user_angel_type', function ($query) use ($angeltype) {
-            /** @var JoinClause $query */
-            $query
-                ->on('users.id', '=', 'user_angel_type.user_id')
-                ->where('user_angel_type.angel_type_id', '=', $angeltype->id);
-        })
-        ->whereNull('user_angel_type.id')
-        ->orderBy('users.name')
-        ->get();
+    return $result_shifts['goodie_score'] + $worklogHours;
 }
 
 /**
@@ -123,13 +98,20 @@ function User_get_shifts_sum_query()
         return 'COALESCE(SUM(UNIX_TIMESTAMP(shifts.end) - UNIX_TIMESTAMP(shifts.start)), 0)';
     }
 
+    /* @see \Engelsystem\Models\Shifts\Shift::isNightShift to keep it in sync */
     return sprintf(
         '
             COALESCE(SUM(
                 (1 + (
-                    (HOUR(shifts.end) > %1$d AND HOUR(shifts.end) < %2$d)
-                    OR (HOUR(shifts.start) > %1$d AND HOUR(shifts.start) < %2$d)
-                    OR (HOUR(shifts.start) <= %1$d AND HOUR(shifts.end) >= %2$d)
+                    /* Starts during night */
+                    HOUR(shifts.start) >= %1$d AND HOUR(shifts.start) < %2$d
+                    /* Ends during night */
+                    OR (
+                        HOUR(shifts.end) > %1$d
+                        || HOUR(shifts.end) = %1$d AND MINUTE(shifts.end) > 0
+                    ) AND HOUR(shifts.end) <= %2$d
+                    /* Starts before and ends after night */
+                    OR HOUR(shifts.start) <= %1$d AND HOUR(shifts.end) >= %2$d
                 ))
                 * (UNIX_TIMESTAMP(shifts.end) - UNIX_TIMESTAMP(shifts.start))
                 * (1 - (%3$d + 1) * `shift_entries`.`freeloaded`)

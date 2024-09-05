@@ -31,7 +31,7 @@ class NewsControllerTest extends ApiBaseControllerTest
         $this->assertCount(3, $data['data']);
 
         $this->assertCount(1, collect($data['data'])->filter(function ($item) use ($items) {
-            return $item['title'] == $items->first()->getAttribute('title');
+            return $item['name'] == $items->first()->getAttribute('title');
         }));
     }
 }

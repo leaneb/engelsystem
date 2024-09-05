@@ -8,6 +8,7 @@ use Engelsystem\Application;
 use Engelsystem\Controllers\BaseController;
 use Engelsystem\Helpers\Authenticator;
 use Engelsystem\Http\Exceptions\HttpForbidden;
+use Illuminate\Support\Str;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -24,6 +25,7 @@ class RequestHandler implements MiddlewareInterface
     /**
      * Process an incoming server request and return a response, optionally delegating
      * response creation to a handler.
+     * Implements basic permission checking if the controller supports it.
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
@@ -102,8 +104,14 @@ class RequestHandler implements MiddlewareInterface
                 continue;
             }
 
-            if (!$auth->can($permission)) {
-                throw new HttpForbidden();
+            foreach ((array) $permission as $value) {
+                if (
+                    Str::contains($value, '||')
+                        ? !$auth->canAny(explode('||', $value))
+                        : !$auth->can($permission)
+                ) {
+                    throw new HttpForbidden();
+                }
             }
         }
 

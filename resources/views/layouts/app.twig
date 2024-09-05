@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ session_get('locale')|split('_')[0]|escape('html_attr') }}">
+<html lang="{{ session_get('locale')|split('_')[0]|escape('html_attr') }}" class="h-100">
 <head>
     {% block head %}
         <meta charset="utf-8"/>
@@ -12,7 +12,7 @@
         <link rel="stylesheet" type="text/css" href="{{ asset('assets/theme' ~ themeId ~ '.css') }}"/>
         <script src="{{ asset('assets/vendor.js') }}"></script>
 
-        {% if page() in ['news', 'meetings'] and is_user() and has_permission_to('atom') -%}
+        {% if page() in ['news', 'meetings'] and is_user() and can('atom') -%}
             {% set parameters = {'key': user.api_key} -%}
             {% if page() == 'meetings' -%}
                 {% set parameters = {'meetings': 1}|merge(parameters) -%}
@@ -23,7 +23,7 @@
 
     {% endblock %}
 </head>
-<body data-theme_type="{{ theme.type }}">
+<body class="d-flex flex-column h-100" data-theme_type="{{ theme.type }}">
 
 {% block body %}
     {% block header %}
@@ -36,11 +36,12 @@
                 {{ content|raw }}
             {% endblock %}
         </div>
-        <div id="footer">
-            {% block footer %}
-                {% include "layouts/parts/footer.twig" %}
-            {% endblock %}
-        </div>
+    </div>
+
+    <div id="footer" class="mt-auto">
+        {% block footer %}
+            {% include "layouts/parts/footer.twig" %}
+        {% endblock %}
     </div>
 
     {% block scripts %}{% endblock %}

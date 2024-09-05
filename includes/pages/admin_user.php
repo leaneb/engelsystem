@@ -28,8 +28,8 @@ function admin_user()
     $goodie_enabled = $goodie !== GoodieType::None;
     $goodie_tshirt = $goodie === GoodieType::Tshirt;
     $user_info_edit = auth()->can('user.info.edit');
-    $user_edit_shirt = auth()->can('user.edit.shirt');
-    $user_edit = auth()->can('user.edit');
+    $user_goodie_edit = auth()->can('user.goodie.edit');
+    $user_nick_edit = auth()->can('user.nick.edit');
     $admin_arrive = auth()->can('admin_arrive');
 
     if (!$request->has('id')) {
@@ -45,7 +45,7 @@ function admin_user()
         }
 
         $html .= __('Here you can change the user entry. Under the item \'Arrived\' the angel is marked as present, a yes at Active means that the angel was active.');
-        if ($goodie_enabled && $user_edit_shirt) {
+        if ($goodie_enabled && $user_goodie_edit) {
             if ($goodie_tshirt) {
                 $html .= ' ' . __('If the angel is active, it can claim a T-shirt. If T-shirt is set to \'Yes\', the angel already got their T-shirt.');
             } else {
@@ -63,12 +63,12 @@ function admin_user()
         $html .= '<table>' . "\n";
         $html .= '  <tr><td>' . __('general.nick') . '</td><td>'
             . '<input size="40" name="eNick" value="' . htmlspecialchars($user_source->name)
-            . '" class="form-control" maxlength="24" ' . ($user_edit ? '' : 'disabled') . '>'
+            . '" class="form-control" maxlength="24" ' . ($user_nick_edit ? '' : 'disabled') . '>'
             . '</td></tr>' . "\n";
         $html .= '  <tr><td>' . __('Last login') . '</td><td><p class="help-block">'
             . ($user_source->last_login_at ? $user_source->last_login_at->format(__('general.datetime')) : '-')
             . '</p></td></tr>' . "\n";
-        if (config('enable_user_name')) {
+        if (config('enable_full_name')) {
             $html .= '  <tr><td>' . __('settings.profile.firstname') . '</td><td>'
                 . '<input size="40" name="eName" value="' . htmlspecialchars((string) $user_source->personalData->last_name) . '" class="form-control" maxlength="64">'
                 . '</td></tr>' . "\n";
@@ -89,7 +89,7 @@ function admin_user()
                 . '<input type="email" size="40" name="eemail" value="' . htmlspecialchars($user_source->email) . '" class="form-control" maxlength="254">'
                 . '</td></tr>' . "\n";
         }
-        if ($goodie_tshirt && $user_edit_shirt) {
+        if ($goodie_tshirt && $user_goodie_edit) {
             $html .= '  <tr><td>' . __('user.shirt_size') . '</td><td>'
                 . html_select_key(
                     'size',
@@ -122,38 +122,38 @@ function admin_user()
 
         // Arrived?
         $html .= '  <tr><td>' . __('user.arrived') . '</td><td>' . "\n";
-        if ($admin_arrive) {
-            $html .= html_options('arrive', $options, $user_source->state->arrived) . '</td></tr>' . "\n";
-        } else {
-            $html .= ($user_source->state->arrived ? __('Yes') : __('No'));
-            $html .= '</td></tr>' . "\n";
-        }
+        $html .= $admin_arrive
+            ? html_options('arrive', $options, $user_source->state->arrived)
+            : icon_bool($user_source->state->arrived);
+        $html .= '</td></tr>' . "\n";
 
         // Active?
-        if ($user_edit_shirt) {
-            $html .= '  <tr><td>' . __('user.active') . '</td><td>' . "\n";
-            $html .= html_options('eAktiv', $options, $user_source->state->active) . '</td></tr>' . "\n";
-        } else {
-            $html .= '  <tr><td>' . __('user.active') . '</td><td>' . "\n";
-            $html .= ($user_source->state->active ? __('Yes') : __('No'));
+        $html .= '  <tr><td>' . __('user.active') . '</td><td>' . "\n";
+        $html .= $user_goodie_edit
+            ? html_options('eAktiv', $options, $user_source->state->active)
+            : icon_bool($user_source->state->active);
+        $html .= '</td></tr>' . "\n";
+
+        // Forced active?
+        if (config('enable_force_active')) {
+            $html .= '  <tr><td>' . __('Force active') . '</td><td>' . "\n";
+            $html .= auth()->can('user.fa.edit')
+                ? html_options('force_active', $options, $user_source->state->force_active)
+                : icon_bool($user_source->state->force_active);
             $html .= '</td></tr>' . "\n";
         }
 
-        // Forced active?
-        if (auth()->can('admin_active') && config('enable_force_active')) {
-            $html .= '  <tr><td>' . __('Force active') . '</td><td>' . "\n";
-            $html .= html_options('force_active', $options, $user_source->state->force_active) . '</td></tr>' . "\n";
+        if ($goodie_enabled) {
+            // got goodie?
+            $html .= '  <tr><td>'
+                . ($goodie_tshirt ? __('T-shirt') : __('Goodie'))
+                . '</td><td>' . "\n";
+            $html .= $user_goodie_edit
+                ? html_options('eTshirt', $options, $user_source->state->got_goodie)
+                : icon_bool($user_source->state->got_goodie);
+            $html .= '</td></tr>' . "\n";
         }
 
-        if ($goodie_enabled && $user_edit_shirt) {
-            // T-Shirt bekommen?
-            if ($goodie_tshirt) {
-                $html .= '  <tr><td>' . __('T-shirt') . '</td><td>' . "\n";
-            } else {
-                $html .= '  <tr><td>' . __('Goodie') . '</td><td>' . "\n";
-            }
-            $html .= html_options('eTshirt', $options, $user_source->state->got_shirt) . '</td></tr>' . "\n";
-        }
         $html .= '</table>' . "\n" . '</td><td></td></tr>';
 
         $html .= '</td></tr>' . "\n";
@@ -173,7 +173,7 @@ function admin_user()
         $html .= '<table>' . "\n";
         $html .= '  <tr><td>' . __('settings.password')
             . ' <span class="bi bi-info-circle-fill text-info" data-bs-toggle="tooltip" title="'
-            . __('password.minimal_length', [config('min_password_length')]) . '"></span>'
+            . __('password.minimal_length', [config('password_min_length')]) . '"></span>'
             . '</td><td>'
             . '<input type="password" size="40" name="new_pw" value="" class="form-control" autocomplete="new-password">'
             . '</td></tr>' . "\n";
@@ -307,17 +307,17 @@ function admin_user()
                     break;
                 }
                 $old_nick = $user_source->name;
-                if ($nickValid && $user_edit) {
+                if ($nickValid && $user_nick_edit) {
                     $changed_nick = ($user_source->name !== $nick) || User::whereName($nick)->exists();
                     $user_source->name = $nick;
                 }
                 $user_source->save();
 
-                if (config('enable_user_name')) {
+                if (config('enable_full_name')) {
                     $user_source->personalData->first_name = $request->postData('eVorname');
                     $user_source->personalData->last_name = $request->postData('eName');
                 }
-                if ($goodie_tshirt && $user_edit_shirt) {
+                if ($goodie_tshirt && $user_goodie_edit) {
                     $user_source->personalData->shirt_size = $request->postData('eSize');
                 }
                 $user_source->personalData->save();
@@ -328,8 +328,8 @@ function admin_user()
                 }
                 $user_source->contact->save();
 
-                if ($goodie_enabled && $user_edit_shirt) {
-                    $user_source->state->got_shirt = $request->postData('eTshirt');
+                if ($goodie_enabled && $user_goodie_edit) {
+                    $user_source->state->got_goodie = $request->postData('eTshirt');
                 }
                 if ($user_info_edit) {
                     $user_source->state->user_info = $request->postData('userInfo');
@@ -338,10 +338,10 @@ function admin_user()
                     $user_source->state->arrived = $request->postData('arrive');
                 }
 
-                if ($user_edit_shirt) {
+                if ($user_goodie_edit) {
                     $user_source->state->active = $request->postData('eAktiv');
                 }
-                if (auth()->can('admin_active') && config('enable_force_active')) {
+                if (auth()->can('user.fa.edit') && config('enable_force_active')) {
                     $user_source->state->force_active = $request->input('force_active');
                 }
                 $user_source->state->save();
@@ -356,7 +356,7 @@ function admin_user()
                     . ', arrived: ' . $user_source->state->arrived
                     . ', active: ' . $user_source->state->active
                     . ', force-active: ' . $user_source->state->force_active
-                    . ($goodie_tshirt ? ', t-shirt: ' : ', goodie: ' . $user_source->state->got_shirt)
+                    . ($goodie_tshirt ? ', t-shirt: ' : ', goodie: ' . $user_source->state->got_goodie)
                     . ($user_info_edit ? ', user-info: ' . $user_source->state->user_info : '')
                 );
                 $html .= success(__('Changes were saved.') . "\n", true);

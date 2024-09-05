@@ -8,15 +8,15 @@
     <div class="container">
         <h1>
             {% if not is_index|default(false) %}
-                {{ m.button(m.icon('chevron-left'), location
+                {{ m.back(location
                     ? url('/locations', {'action': 'view', 'location_id': location.id})
-                    : url('/admin/locations'), 'secondary', 'sm', __('general.back')) }}
+                    : url('/admin/locations')) }}
             {% endif %}
 
             {{ block('title') }}
 
             {% if is_index|default(false) %}
-                {{ m.button(m.icon('plus-lg'), url('/admin/locations/edit'), 'secondary') }}
+                {{ m.add(url('/admin/locations/edit')) }}
             {% endif %}
         </h1>
 
@@ -33,6 +33,7 @@
                                 <th>{{ __('general.name') }}</th>
                                 <th>{{ __('general.dect') }}</th>
                                 <th>{{ __('location.map_url') }}</th>
+                                <th>{{ __('general.shifts') }}</th>
                                 <th></th>
                             </tr>
                             </thead>
@@ -51,10 +52,12 @@
 
                                     <td>{{ m.iconBool(location.map_url) }}</td>
 
+                                    <td>{{ m.iconBool(location.shifts_count) }}</td>
+
                                     <td>
                                         <div class="d-flex ms-auto">
 
-                                            {{ m.button(m.icon('pencil'), url('/admin/locations/edit/' ~ location.id), null, 'sm', __('form.edit')) }}
+                                            {{ m.edit(url('/admin/locations/edit/' ~ location.id)) }}
 
                                             <form method="post" class="ps-1">
                                                 {{ csrf() }}

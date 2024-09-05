@@ -63,8 +63,8 @@ function AngelType_delete_view(AngelType $angeltype)
     $link = button($angeltype->id
         ? url('/angeltypes', ['action' => 'view', 'angeltype_id' => $angeltype->id])
         : url('/angeltypes'), icon('chevron-left'), 'btn-sm', '', __('general.back'));
-    return page_with_title($link . ' ' . sprintf(__('Delete angeltype %s'), htmlspecialchars($angeltype->name)), [
-        info(sprintf(__('Do you want to delete angeltype %s?'), $angeltype->name), true),
+    return page_with_title($link . ' ' . sprintf(__('Delete angel type %s'), htmlspecialchars($angeltype->name)), [
+        info(sprintf(__('Do you want to delete angel type %s?'), $angeltype->name), true),
         form([
             buttons([
                 button(url('/angeltypes'), icon('x-lg') . __('form.cancel')),
@@ -83,14 +83,44 @@ function AngelType_delete_view(AngelType $angeltype)
  */
 function AngelType_edit_view(AngelType $angeltype, bool $supporter_mode)
 {
+    $requires_ifsg = '';
+    $requires_driving_license = '';
+    if (config('ifsg_enabled')) {
+        $requires_ifsg = $supporter_mode ?
+            form_info(
+                __('angeltype.ifsg.required'),
+                $angeltype->requires_ifsg_certificate
+                    ? __('Yes')
+                    : __('No')
+            ) : form_checkbox(
+                'requires_ifsg_certificate',
+                __('angeltype.ifsg.required'),
+                $angeltype->requires_ifsg_certificate
+            );
+    }
+    if (config('driving_license_enabled')) {
+        $requires_driving_license = $supporter_mode ?
+            form_info(
+                __('Requires driver license'),
+                $angeltype->requires_driver_license
+                    ? __('Yes')
+                    : __('No')
+            ) : form_checkbox(
+                'requires_driver_license',
+                __('Requires driver license'),
+                $angeltype->requires_driver_license
+            );
+    }
+
     $link = button($angeltype->id
         ? url('/angeltypes', ['action' => 'view', 'angeltype_id' => $angeltype->id])
         : url('/angeltypes'), icon('chevron-left'), 'btn-sm', '', __('general.back'));
+
     return page_with_title(
         $link . ' ' . (
             $angeltype->id ?
                 sprintf(__('Edit %s'), htmlspecialchars((string) $angeltype->name)) :
-                __('Create angeltype')
+                __('Create angel type')
         ),
         [
             $angeltype->id ?
@@ -101,7 +131,7 @@ function AngelType_edit_view(AngelType $angeltype, bool $supporter_mode)
             form([
                 $supporter_mode
                     ? form_info(__('general.name'), htmlspecialchars($angeltype->name))
-                    : form_text('name', __('general.name'), $angeltype->name),
+                    : form_text('name', __('general.name'), $angeltype->name, false, 255),
                 $supporter_mode
                     ? form_info(__('angeltypes.restricted'), $angeltype->restricted ? __('Yes') : __('No'))
                     : form_checkbox(
@@ -120,30 +150,8 @@ function AngelType_edit_view(AngelType $angeltype, bool $supporter_mode)
                         __('angeltypes.shift.self_signup.info') . '"></span>',
                         $angeltype->shift_self_signup
                     ),
-                $supporter_mode ?
-                    form_info(
-                        __('Requires driver license'),
-                        $angeltype->requires_driver_license
-                            ? __('Yes')
-                            : __('No')
-                    ) :
-                    form_checkbox(
-                        'requires_driver_license',
-                        __('Requires driver license'),
-                        $angeltype->requires_driver_license
-                    ),
-                $supporter_mode && config('ifsg_enabled') ?
-                    form_info(
-                        __('angeltype.ifsg.required'),
-                        $angeltype->requires_ifsg_certificate
-                            ? __('Yes')
-                            : __('No')
-                    ) :
-                    form_checkbox(
-                        'requires_ifsg_certificate',
-                        __('angeltype.ifsg.required'),
-                        $angeltype->requires_ifsg_certificate
-                    ),
+                $requires_driving_license,
+                $requires_ifsg,
                 $supporter_mode
                     ? form_info(__('Show on dashboard'), $angeltype->show_on_dashboard ? __('Yes') : __('No'))
                     : form_checkbox('show_on_dashboard', __('Show on dashboard'), $angeltype->show_on_dashboard),
@@ -182,7 +190,7 @@ function AngelType_edit_view(AngelType $angeltype, bool $supporter_mode)
  * @param UserAngelType|null $user_angeltype
  * @param bool               $admin_angeltypes
  * @param bool               $supporter
- * @param License            $user_driver_license
+ * @param License            $user_license
  * @param User|null          $user
  * @return string
  */
@@ -191,16 +199,24 @@ function AngelType_view_buttons(
     ?UserAngelType $user_angeltype,
     $admin_angeltypes,
     $supporter,
-    $user_driver_license,
+    $user_license,
     $user
 ) {
-    if ($angeltype->requires_driver_license) {
+    if (
+        config('driving_license_enabled')
+        && $angeltype->requires_driver_license
+        && $user_angeltype
+    ) {
         $buttons[] = button(
             url('/settings/certificates'),
-            icon('person-vcard') . __('my driving license')
+            icon('person-vcard') . __('My driving license')
         );
     }
-    if (config('isfg_enabled') && $angeltype->requires_ifsg_certificate) {
+    if (
+        config('ifsg_enabled')
+        && $angeltype->requires_ifsg_certificate
+        && $user_angeltype
+    ) {
         $buttons[] = button(
             url('/settings/certificates'),
             icon('card-checklist') . __('angeltype.ifsg.own')
@@ -216,8 +232,8 @@ function AngelType_view_buttons(
             ($admin_angeltypes ? 'Join' : ''),
         );
     } else {
-        if ($angeltype->requires_driver_license && !$user_driver_license->wantsToDrive()) {
-            error(__('This angeltype requires a driver license. Please enter your driver license information!'));
+        if (config('driving_license_enabled') && $angeltype->requires_driver_license && !$user_license->wantsToDrive()) {
+            error(__('This angel type requires a driver license. Please enter your driver license information!'));
         }
 
         if (
@@ -230,7 +246,7 @@ function AngelType_view_buttons(
 
         if ($angeltype->restricted && !$user_angeltype->confirm_user_id) {
             error(sprintf(
-                __('You are unconfirmed for this angeltype. Please go to the introduction for %s to get confirmed.'),
+                __('You are unconfirmed for this angel type. Please go to the introduction for %s to get confirmed.'),
                 $angeltype->name
             ));
         }
@@ -265,6 +281,13 @@ function AngelType_view_buttons(
     return buttons($buttons);
 }
 
+function certificateIcon($confirmed, $certificate)
+{
+    return ($confirmed && $certificate)
+        ? icon('check2-all', 'text-success')
+        : icon_bool($certificate);
+}
+
 /**
  * Renders and sorts the members of an angeltype into supporters, members and unconfirmed members.
  *
@@ -282,26 +305,52 @@ function AngelType_view_members(AngelType $angeltype, $members, $admin_user_ange
     foreach ($members as $member) {
         $member->name = User_Nick_render($member) . User_Pronoun_render($member);
         if (config('enable_dect')) {
-            $member['dect'] = htmlspecialchars((string) $member->contact->dect);
+            $member['dect'] =
+                sprintf('<a href="tel:%s">%1$s</a>', htmlspecialchars((string) $member->contact->dect));
         }
-        if ($angeltype->requires_driver_license) {
-            $member['wants_to_drive'] = icon_bool($member->license->wantsToDrive());
+        if (config('driving_license_enabled') && $angeltype->requires_driver_license) {
+            $drive_confirmed = $member->license->drive_confirmed;
+            $member['wants_to_drive'] = certificateIcon($drive_confirmed, $member->license->wantsToDrive());
             $member['has_car'] = icon_bool($member->license->has_car);
-            $member['has_license_car'] = icon_bool($member->license->drive_car);
-            $member['has_license_3_5t_transporter'] = icon_bool($member->license->drive_3_5t);
-            $member['has_license_7_5t_truck'] = icon_bool($member->license->drive_7_5t);
-            $member['has_license_12t_truck'] = icon_bool($member->license->drive_12t);
-            $member['has_license_forklift'] = icon_bool($member->license->drive_forklift);
+            $member['has_license_car'] = certificateIcon($drive_confirmed, $member->license->drive_car);
+            $member['has_license_3_5t_transporter'] = certificateIcon($drive_confirmed, $member->license->drive_3_5t);
+            $member['has_license_7_5t_truck'] = certificateIcon($drive_confirmed, $member->license->drive_7_5t);
+            $member['has_license_12t_truck'] = certificateIcon($drive_confirmed, $member->license->drive_12t);
+            $member['has_license_forklift'] = certificateIcon($drive_confirmed, $member->license->drive_forklift);
         }
-        if ($angeltype->requires_ifsg_certificate && config('ifsg_enabled')) {
-            $member['ifsg_certificate'] = icon_bool($member->license->ifsg_certificate);
+        if (config('ifsg_enabled') && $angeltype->requires_ifsg_certificate) {
+            $ifsg_confirmed = $member->license->ifsg_confirmed;
+            $member['ifsg_certificate'] = certificateIcon($ifsg_confirmed, $member->license->ifsg_certificate);
             if (config('ifsg_light_enabled')) {
-                $member['ifsg_certificate_light'] = icon_bool($member->license->ifsg_certificate_light);
+                $member['ifsg_certificate_light'] = certificateIcon($ifsg_confirmed, $member->license->ifsg_certificate_light);
             }
         }
 
+        $edit_certificates = '';
+        if (
+            (
+                config('driving_license_enabled')
+                && $angeltype->requires_driver_license
+                && ($admin_user_angeltypes || auth()->can('user.drive.edit'))
+            )
+            || (
+                config('ifsg_enabled')
+                && $angeltype->requires_ifsg_certificate
+                && ($admin_user_angeltypes || auth()->can('user.ifsg.edit'))
+            )
+        ) {
+            $edit_certificates =
+                button(
+                    url('/users/' . $member->id . '/certificates'),
+                    icon('card-checklist'),
+                    'btn-sm',
+                    '',
+                    __('Edit certificates'),
+                );
+        }
         if ($angeltype->restricted && empty($member->pivot->confirm_user_id)) {
             $member['actions'] = table_buttons([
+                $edit_certificates,
                 button(
                     url(
                         '/user-angeltypes',
@@ -323,6 +372,7 @@ function AngelType_view_members(AngelType $angeltype, $members, $admin_user_ange
         } elseif ($member->pivot->supporter) {
             if ($admin_angeltypes || ($admin_user_angeltypes && config('supporters_can_promote'))) {
                 $member['actions'] = table_buttons([
+                    $edit_certificates,
                     button(
                         url('/user-angeltypes', [
                             'action'            => 'update',
@@ -336,12 +386,15 @@ function AngelType_view_members(AngelType $angeltype, $members, $admin_user_ange
                     ),
                 ]);
             } else {
-                $member['actions'] = '';
+                $member['actions'] = $edit_certificates
+                    ? table_buttons([$edit_certificates,])
+                    : '';
             }
             $supporters[] = $member;
         } else {
             if ($admin_user_angeltypes) {
                 $member['actions'] = table_buttons([
+                    $edit_certificates,
                     ($admin_angeltypes || config('supporters_can_promote')) ?
                         button(
                             url('/user-angeltypes', [
@@ -365,6 +418,10 @@ function AngelType_view_members(AngelType $angeltype, $members, $admin_user_ange
                         '',
                         __('Remove'),
                     ),
+                ]);
+            } elseif ($edit_certificates) {
+                $member['actions'] = table_buttons([
+                    $edit_certificates,
                 ]);
             }
             $members_confirmed[] = $member;
@@ -396,7 +453,10 @@ function AngelType_view_table_headers(AngelType $angeltype, $supporter, $admin_a
         $headers['dect'] = __('general.dect');
     }
 
-    if ($angeltype->requires_driver_license && ($supporter || $admin_angeltypes)) {
+    if (
+        config('driving_license_enabled') && $angeltype->requires_driver_license
+        && ($supporter || $admin_angeltypes || auth()->can('user.drive.edit'))
+    ) {
         $headers = array_merge($headers, [
             'wants_to_drive'               => __('Driver'),
             'has_car'                      => __('Has car'),
@@ -408,7 +468,10 @@ function AngelType_view_table_headers(AngelType $angeltype, $supporter, $admin_a
         ]);
     }
 
-    if (config('ifsg_enabled') && $angeltype->requires_ifsg_certificate && ($supporter || $admin_angeltypes)) {
+    if (
+        config('ifsg_enabled') && $angeltype->requires_ifsg_certificate
+        && ($supporter || $admin_angeltypes || auth()->can('user.ifsg.edit'))
+    ) {
         if (config('ifsg_light_enabled')) {
             $headers['ifsg_certificate_light'] = __('ifsg.certificate_light');
         }
@@ -429,7 +492,7 @@ function AngelType_view_table_headers(AngelType $angeltype, $supporter, $admin_a
  * @param bool                  $admin_user_angeltypes
  * @param bool                  $admin_angeltypes
  * @param bool                  $supporter
- * @param License               $user_driver_license
+ * @param License               $user_license
  * @param User                  $user
  * @param ShiftsFilterRenderer  $shiftsFilterRenderer
  * @param ShiftCalendarRenderer $shiftCalendarRenderer
@@ -443,17 +506,24 @@ function AngelType_view(
     $admin_user_angeltypes,
     $admin_angeltypes,
     $supporter,
-    $user_driver_license,
+    $user_license,
     $user,
     ShiftsFilterRenderer $shiftsFilterRenderer,
     ShiftCalendarRenderer $shiftCalendarRenderer,
     $tab
 ) {
-    $link = button(url('/angeltypes'), icon('chevron-left'), 'btn-sm', '', __('general.back'));
+    $back = button(url('/angeltypes'), icon('chevron-left'), 'btn-sm', '', __('general.back'));
+    $add = (($admin_angeltypes || $admin_user_angeltypes) ? button(
+        url('/user-angeltypes', ['action' => 'add', 'angeltype_id' => $angeltype->id]),
+        icon('plus-lg'),
+        '',
+        '',
+        __('general.add')
+    ) : '');
     return page_with_title(
-        $link . ' ' . sprintf(__('Team %s'), htmlspecialchars($angeltype->name)),
+        $back . ' ' . sprintf(__('Team %s'), htmlspecialchars($angeltype->name)) . ' ' . $add,
         [
-            AngelType_view_buttons($angeltype, $user_angeltype, $admin_angeltypes, $supporter, $user_driver_license, $user),
+            AngelType_view_buttons($angeltype, $user_angeltype, $admin_angeltypes, $supporter, $user_license, $user),
             msg(),
             tabs([
                 __('Info')   => AngelType_view_info(
@@ -463,7 +533,7 @@ function AngelType_view(
                     $admin_angeltypes,
                     $supporter
                 ),
-                __('Shifts') => AngelType_view_shifts(
+                __('general.shifts') => AngelType_view_shifts(
                     $angeltype,
                     $shiftsFilterRenderer,
                     $shiftCalendarRenderer
@@ -506,6 +576,13 @@ function AngelType_view_info(
     $admin_angeltypes,
     $supporter
 ) {
+    $required_info_show = !auth()->user()
+            ->userAngelTypes()
+            ->where('angel_types.id', $angeltype->id)
+            ->count()
+        && !$admin_angeltypes
+        && !$admin_user_angeltypes
+        && !$supporter;
     $info = [];
     if ($angeltype->hasContactInfo()) {
         $info[] = AngelTypes_render_contact_info($angeltype);
@@ -515,6 +592,12 @@ function AngelType_view_info(
     $parsedown = new Parsedown();
     if ($angeltype->description != '') {
         $info[] = $parsedown->parse(htmlspecialchars($angeltype->description));
+    }
+    if ($angeltype->requires_ifsg_certificate && $required_info_show) {
+        $info[] = info(__('angeltype.ifsg.required.info.preview'), true);
+    }
+    if ($angeltype->requires_driver_license && $required_info_show) {
+        $info[] = info(__('angeltype.driving_license.required.info.preview'), true);
     }
 
     list($supporters, $members_confirmed, $members_unconfirmed) = AngelType_view_members(
@@ -546,19 +629,14 @@ function AngelType_view_info(
         ];
     }
 
-    $info[] = '<h3>' . __('Members') . '</h3>';
-    if ($admin_user_angeltypes) {
-        $info[] = buttons([
-            button(
-                url(
-                    '/user-angeltypes',
-                    ['action' => 'add', 'angeltype_id' => $angeltype->id]
-                ),
-                icon('plus-lg') . __('Add'),
-                'add'
-            ),
-        ]);
-    }
+    $add = (($admin_angeltypes || $admin_user_angeltypes) ? button(
+        url('/user-angeltypes', ['action' => 'add', 'angeltype_id' => $angeltype->id]),
+        icon('plus-lg'),
+        'btn-sm',
+        '',
+        __('general.add')
+    ) : '');
+    $info[] = '<h3>' . __('Members') . ' ' . $add . '</h3>';
     $info[] = table($table_headers, $members_confirmed);
 
     if ($admin_user_angeltypes && $angeltype->restricted && count($members_unconfirmed) > 0) {
@@ -622,9 +700,15 @@ function AngelTypes_render_contact_info(AngelType $angeltype)
  */
 function AngelTypes_list_view($angeltypes, bool $admin_angeltypes)
 {
-    $link = button(url('/angeltypes', ['action' => 'edit']), icon('plus-lg'), 'add');
+    $add = button(
+        url('/angeltypes', ['action' => 'edit']),
+        icon('plus-lg'),
+        '',
+        '',
+        __('general.add')
+    );
     return page_with_title(
-        angeltypes_title() . ' ' . ($admin_angeltypes ? $link : ''),
+        angeltypes_title() . ' ' . ($admin_angeltypes ? $add : ''),
         [
             msg(),
             buttons([

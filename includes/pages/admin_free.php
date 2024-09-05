@@ -40,7 +40,7 @@ function admin_free()
     /** @var User[] $users */
     $users = [];
     if ($request->has('submit')) {
-        $query = User::with(['personalData', 'contact', 'state'])
+        $query = User::with(['personalData', 'contact', 'state', 'settings'])
             ->select('users.*')
             ->leftJoin('shift_entries', 'users.id', 'shift_entries.user_id')
             ->leftJoin('users_state', 'users.id', 'users_state.user_id')
@@ -118,7 +118,7 @@ function admin_free()
                 div('col-md-12 form-inline', [
                     div('row', [
                         form_text('search', __('form.search'), $search, null, null, null, 'col'),
-                        form_select('angeltype', __('Angeltype'), $angel_types, $angelType, '', 'col'),
+                        form_select('angeltype', __('Angel type'), $angel_types, $angelType, '', 'col'),
                         form_submit('submit', icon('search') . __('form.search')),
                     ]),
                 ]),

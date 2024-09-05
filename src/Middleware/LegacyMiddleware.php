@@ -13,11 +13,13 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
+/**
+ * Middleware to support the old routing / pages from includes
+ */
 class LegacyMiddleware implements MiddlewareInterface
 {
     /** @var array<string> */
     protected array $free_pages = [
-        'admin_event_config',
         'angeltypes',
         'public_dashboard',
         'locations',
@@ -33,7 +35,7 @@ class LegacyMiddleware implements MiddlewareInterface
     /**
      * Handle the request the old way
      *
-     * Should be used before a 404 is send
+     * Should be used before a 404 is sent
      */
     public function process(
         ServerRequestInterface $request,
@@ -42,15 +44,21 @@ class LegacyMiddleware implements MiddlewareInterface
         /** @var Request $appRequest */
         $appRequest = $this->container->get('request');
         $page = $appRequest->query->get('p');
+        // Support old URL/permission scheme
         if (empty($page)) {
             $page = $appRequest->path();
             $page = str_replace('-', '_', $page);
         }
 
+        $allowPage = false;
+        if ($page === 'admin_arrive') {
+            $allowPage = $this->auth->can('users.arrive.list');
+        }
+
         $title = $content = '';
         if (
             preg_match('~^\w+$~i', $page)
-            && (in_array($page, $this->free_pages) || $this->auth->can($page))
+            && (in_array($page, $this->free_pages) || $this->auth->can($page) || $allowPage)
         ) {
             list($title, $content) = $this->loadPage($page);
         }
@@ -88,9 +96,6 @@ class LegacyMiddleware implements MiddlewareInterface
                 return users_controller();
             case 'user_angeltypes':
                 return user_angeltypes_controller();
-            case 'admin_event_config':
-                list($title, $content) = event_config_edit_controller();
-                return [$title, $content];
             case 'locations':
                 return locations_controller();
             case 'user_myshifts':
@@ -143,7 +148,7 @@ class LegacyMiddleware implements MiddlewareInterface
             return response($content, $page);
         }
 
-        if (strpos((string) $content, '<html') !== false) {
+        if (str_contains($content, '<html')) {
             return response($content);
         }
 
@@ -154,8 +159,7 @@ class LegacyMiddleware implements MiddlewareInterface
                     'title'   => $title,
                     'content' => msg() . $content,
                 ]
-            ),
-            200
+            )
         );
     }
 }

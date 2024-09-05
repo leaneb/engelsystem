@@ -34,15 +34,27 @@
     </a>
 {% endmacro %}
 
-{% macro button(label, url, type, size, title, icon_left, icon_right) %}
-    <a href="{{ url }}" class="btn btn-{{ type|default('secondary') }}
-        {%- if size %} btn-{{ size }}{% endif %}"
-        {%- if title %} title="{{ title }}"{% endif -%}
+{% macro button(label, url, opt) %}
+    <a href="{{ url }}" class="btn btn-{{ opt.type|default('secondary') }}
+        {%- if opt.size is defined %} btn-{{ opt.size }}{% endif %}"
+        {%- if opt.title is defined %} title="{{ opt.title }}"{% endif -%}
     >
-        {%- if icon_left %}{{ _self.icon(icon_left) }}{% endif %}
+        {%- if opt.icon_left is defined %}{{ _self.icon(opt.icon_left) }}{% endif %}
         {{ label }}
-        {%- if icon_right %}{{ _self.icon(icon_right) }}{% endif %}
+        {%- if opt.icon_right is defined %}{{ _self.icon(opt.icon_right) }}{% endif %}
     </a>
+{% endmacro %}
+
+{% macro edit(url) %}
+    {{ _self.button(_self.icon('pencil'), url, {'size': 'sm', 'title': __('form.edit')}) }}
+{% endmacro %}
+
+{% macro back(url) %}
+    {{ _self.button(_self.icon('chevron-left'), url, {'size': 'sm', 'title': __('general.back')}) }}
+{% endmacro %}
+
+{% macro add(url) %}
+    {{ _self.button(_self.icon('plus-lg'), url, {'title': __('general.add')}) }}
 {% endmacro %}
 
 {% macro info(text, raw) %}
