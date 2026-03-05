@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Engelsystem\Controllers\Admin;
 
+use Carbon\CarbonInterval;
 use Engelsystem\Config\Config;
 use Engelsystem\Config\GoodieType;
 use Engelsystem\Controllers\BaseController;
 use Engelsystem\Controllers\HasUserNotifications;
 use Engelsystem\Helpers\Authenticator;
+use Engelsystem\Helpers\Carbon;
+use Engelsystem\Helpers\Goodie;
 use Engelsystem\Http\Exceptions\HttpNotFound;
 use Engelsystem\Http\Redirector;
 use Engelsystem\Http\Request;
@@ -48,13 +51,20 @@ class UserGoodieController extends BaseController
         $this->checkActive();
         $userId = (int) $request->getAttribute('user_id');
 
+        /** @var User $user */
         $user = $this->user->findOrFail($userId);
+        $goodieScore = $user->state->force_active ? '~' :
+            Carbon::formatDuration(
+                CarbonInterval::minutes(round(Goodie::userScore($user) * 60)),
+                __('general.duration')
+            );
 
         return $this->response->withView(
             'admin/user/edit-goodie.twig',
             [
                 'userdata' => $user,
                 'is_tshirt' => $this->config->get('goodie_type') === GoodieType::Tshirt->value,
+                'goodie_score' => $goodieScore,
             ]
         );
     }
@@ -80,7 +90,13 @@ class UserGoodieController extends BaseController
         }
 
         if ($this->auth->can('admin_arrive')) {
-            $user->state->arrived = (bool) $data['arrived'];
+            if ($user->state->arrived != (bool) $data['arrived']) {
+                if ((bool) $data['arrived']) {
+                    $user->state->arrival_date = new Carbon();
+                } else {
+                    $user->state->arrival_date = null;
+                }
+            }
         }
 
         $user->state->active = (bool) $data['active'];
@@ -88,7 +104,7 @@ class UserGoodieController extends BaseController
         $user->state->save();
 
         $this->log->info(
-            'Updated user goodie state "{user}" ({id}): '
+            'Updated user goodie state {user} ({id}): '
             . '{size}, arrived: {arrived}, active: {active}, got goodie: {got_goodie}',
             [
                 'id'        => $user->id,

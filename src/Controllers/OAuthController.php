@@ -13,6 +13,7 @@ use Engelsystem\Http\Request;
 use Engelsystem\Http\Response;
 use Engelsystem\Http\UrlGenerator;
 use Engelsystem\Models\OAuth;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use League\OAuth2\Client\Provider\AbstractProvider;
@@ -112,7 +113,9 @@ class OAuthController extends BaseController
 
         // Update oauth state
         $expirationTime = $accessToken->getExpires();
-        $expirationTime = $expirationTime ? Carbon::createFromTimestamp($expirationTime) : null;
+        $expirationTime = $expirationTime
+            ? Carbon::createFromTimestamp($expirationTime, Carbon::now()->timezone)
+            : null;
         if ($oauth) {
             $oauth->access_token = $accessToken->getToken();
             $oauth->refresh_token = $accessToken->getRefreshToken();
@@ -138,9 +141,20 @@ class OAuthController extends BaseController
                 'refresh_token' => $accessToken->getRefreshToken(),
                 'expires_at'    => $expirationTime,
             ]);
-            $oauth->user()
-                ->associate($user)
-                ->save();
+
+            try {
+                $oauth->user()
+                    ->associate($user)
+                    ->save();
+            // @codeCoverageIgnoreStart
+            } catch (UniqueConstraintViolationException) {
+                $this->log->error(
+                    'Duplicate OAuth user {user} using {provider}: Database does not support unique with mixed case! ',
+                    ['provider' => $providerName, 'user' => $resourceId]
+                );
+                throw new HttpNotFound('oauth.provider-error');
+                // @codeCoverageIgnoreEnd
+            }
 
             $this->log->info(
                 'Connected OAuth user {user} using {provider}',
@@ -191,6 +205,12 @@ class OAuthController extends BaseController
     public function disconnect(Request $request): Response
     {
         $providerName = $request->getAttribute('provider');
+
+        $this->requireProvider($providerName);
+
+        if (!($this->config->get('oauth')[$providerName]['allow_user_disconnect'] ?? true)) {
+            throw new HttpNotFound();
+        }
 
         $this->oauth
             ->whereUserId($this->auth->user()->id)
@@ -258,7 +278,6 @@ class OAuthController extends BaseController
             return;
         }
 
-        $userState->arrived = true;
         $userState->arrival_date = new Carbon();
         $userState->save();
 
@@ -328,8 +347,9 @@ class OAuthController extends BaseController
         $this->session->set('oauth2_connect_provider', $providerName);
         $this->session->set('oauth2_user_id', $providerUserIdentifier);
 
+        $timezone = Carbon::now()->timezone;
         $expirationTime = $accessToken->getExpires();
-        $expirationTime = $expirationTime ? Carbon::createFromTimestamp($expirationTime) : null;
+        $expirationTime = $expirationTime ? Carbon::createFromTimestamp($expirationTime, $timezone) : null;
         $this->session->set('oauth2_access_token', $accessToken->getToken());
         $this->session->set('oauth2_refresh_token', $accessToken->getRefreshToken());
         $this->session->set('oauth2_expires_at', $expirationTime);

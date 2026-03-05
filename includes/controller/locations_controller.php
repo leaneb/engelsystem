@@ -1,5 +1,6 @@
 <?php
 
+use Engelsystem\Controllers\Admin\LocationsController;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\Location;
 use Engelsystem\ShiftsFilter;
@@ -16,17 +17,16 @@ use Engelsystem\ShiftsFilterRenderer;
  */
 function location_controller(): array
 {
-    if (!auth()->can('view_locations')) {
+    if (!auth()->can('locations.view')) {
         throw_redirect(url('/'));
     }
 
     $request = request();
     $location = load_location();
 
-    $all_shifts = $location->shifts->sortBy('start');
+    $days_list = Days_by_Location_id($location->id);
     $days = [];
-    foreach ($all_shifts as $shift) {
-        $day = $shift->start->format('Y-m-d');
+    foreach ($days_list as $day) {
         if (!isset($days[$day])) {
             $days[$day] = dateWithEventDay($day);
         }
@@ -67,14 +67,11 @@ function locations_controller(): array
 {
     $request = request();
     $action = $request->input('action');
-    if (!$request->has('action')) {
-        $action = 'list';
-    }
 
     return match ($action) {
         'view'  => location_controller(),
-        'list'  => throw_redirect(url('/admin/locations')),
-        default => throw_redirect(url('/admin/locations')),
+        'list'  => throw_redirect(url('/locations')),
+        default => ['', app(LocationsController::class)->index()->getContent()],
     };
 }
 

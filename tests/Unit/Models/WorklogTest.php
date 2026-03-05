@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Engelsystem\Test\Unit\Models;
 
 use Carbon\Carbon;
-use Engelsystem\Models\Worklog;
 use Engelsystem\Models\User\User;
+use Engelsystem\Models\Worklog;
 
 class WorklogTest extends ModelTest
 {
@@ -22,8 +22,9 @@ class WorklogTest extends ModelTest
         $worklog->user()->associate($user1);
         $worklog->creator()->associate($user2);
         $worklog->hours = 4.2;
-        $worklog->comment = 'Lorem ipsum';
+        $worklog->description = 'Lorem ipsum';
         $worklog->worked_at = new Carbon();
+        $worklog->night_shift = false;
         $worklog->save();
 
         $savedWorklog = Worklog::first();

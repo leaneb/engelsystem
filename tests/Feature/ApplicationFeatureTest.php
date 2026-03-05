@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Engelsystem\Test\Feature;
 
+use Engelsystem\Application;
+use Engelsystem\Config\ConfigServiceProvider;
+use Engelsystem\Database\DatabaseServiceProvider;
 use PHPUnit\Framework\TestCase;
 
 abstract class ApplicationFeatureTest extends TestCase
 {
+    protected Application $app;
+
     public static function setUpBeforeClass(): void
     {
         $_SERVER['HTTP_HOST'] = 'foo.bar';
@@ -26,5 +31,21 @@ abstract class ApplicationFeatureTest extends TestCase
 
         ini_set('date.timezone', 'UTC');
         date_default_timezone_set('UTC');
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app = app();
+
+        $csp = new ConfigServiceProvider($this->app);
+        $dbsp = new DatabaseServiceProvider($this->app);
+
+        $csp->register();
+        $dbsp->register();
+
+        $dbsp->boot();
+        $csp->boot();
     }
 }

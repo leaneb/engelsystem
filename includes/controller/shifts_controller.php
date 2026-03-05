@@ -8,8 +8,9 @@ use Engelsystem\Models\Location;
 use Engelsystem\Models\Shifts\NeededAngelType;
 use Engelsystem\Models\Shifts\ScheduleShift;
 use Engelsystem\Models\Shifts\Shift;
-use Engelsystem\Models\Shifts\ShiftType;
 use Engelsystem\Models\Shifts\ShiftSignupStatus;
+use Engelsystem\Models\Shifts\ShiftType;
+use Engelsystem\Models\Tag;
 use Engelsystem\ShiftSignupState;
 use Illuminate\Support\Str;
 
@@ -87,6 +88,11 @@ function shift_edit_controller()
         // Name/Bezeichnung der Schicht, darf leer sein
         $title = strip_request_item('title');
         $description = strip_request_item_nl('description');
+        $tagNames = collect(explode(',', strip_request_item('tags', '')))
+            ->transform(fn($value) => trim($value))
+            ->filter(fn($value) => $value != '')
+            ->unique()
+            ->toArray();
 
         // Auswahl der sichtbaren Locations für die Schichten
         if (
@@ -107,14 +113,14 @@ function shift_edit_controller()
             error(__('Please select a shift type.'));
         }
 
-        if ($request->has('start') && $tmp = DateTime::createFromFormat('Y-m-d H:i', $request->input('start'))) {
+        if ($request->has('start') && $tmp = DateTime::createFromFormat('Y-m-d\TH:i', $request->input('start'))) {
             $start = $tmp;
         } else {
             $valid = false;
             error(__('Please enter a valid starting time for the shifts.'));
         }
 
-        if ($request->has('end') && $tmp = DateTime::createFromFormat('Y-m-d H:i', $request->input('end'))) {
+        if ($request->has('end') && $tmp = DateTime::createFromFormat('Y-m-d\TH:i', $request->input('end'))) {
             $end = $tmp;
         } else {
             $valid = false;
@@ -175,12 +181,20 @@ function shift_edit_controller()
                 }
             }
 
+            $shift->tags()->detach();
+            foreach ($tagNames as $tagName) {
+                $tag = Tag::whereName($tagName)->firstOrCreate(['name' => $tagName]);
+                $shift->tags()->attach($tag);
+            }
+
             engelsystem_log(
                 'Updated shift \'' . $shifttypes[$shifttype_id] . ', ' . $title
                 . '\' from ' . $start->format('Y-m-d H:i')
                 . ' to ' . $end->format('Y-m-d H:i')
+                . ' in ' . $locations[$rid]
+                . ' with tags "' . $shift->tags->implode('name', ', ') . '"'
                 . ' with angel types ' . join(', ', $needed_angel_types_info)
-                . ' and description ' . $description
+                . ' and description "' . $description . '"'
             );
             success(__('Shift updated.'));
 
@@ -190,13 +204,16 @@ function shift_edit_controller()
 
     $angel_types_spinner = '';
     foreach ($angeltypes as $angeltype_id => $angeltype_name) {
-        $angel_types_spinner .= form_spinner(
-            'angeltype_count_' . $angeltype_id,
-            htmlspecialchars($angeltype_name),
-            $needed_angel_types[$angeltype_id],
-            [],
-            (bool) ScheduleShift::whereShiftId($shift->id)->first(),
-        );
+        $angel_types_spinner .=
+            '<div class="col-sm-6 col-md-8 col-lg-6 col-xl-4 col-xxl-3">'
+            . form_spinner(
+                'angeltype_count_' . $angeltype_id,
+                htmlspecialchars($angeltype_name),
+                $needed_angel_types[$angeltype_id],
+                [],
+                (bool) ScheduleShift::whereShiftId($shift->id)->first(),
+            )
+            . '</div>';
     }
 
     $link = button(url('/shifts', ['action' => 'view', 'shift_id' => $shift_id]), icon('chevron-left'), 'btn-sm', '', __('general.back'));
@@ -208,18 +225,52 @@ function shift_edit_controller()
             . info(__('This page is much more comfortable with javascript.'), true)
             . '</noscript>',
             form([
-                form_select('shifttype_id', __('Shift type'), $shifttypes, $shifttype_id),
-                form_text('title', __('title.title'), $title),
-                form_select('rid', __('Location:'), $locations, $rid),
-                form_text('start', __('Start:'), $start->format('Y-m-d H:i')),
-                form_text('end', __('End:'), $end->format('Y-m-d H:i')),
-                form_textarea('description', __('Additional description'), $description),
-                form_info(
-                    '',
-                    __('This description is for single shifts, otherwise please use the description in shift type.')
-                ),
-                '<h2>' . __('Needed angels') . '</h2>',
-                $angel_types_spinner,
+                div('row', [
+                    div('col-md-6 col-xl-5', [
+                        form_select('shifttype_id', __('Shift type'), $shifttypes, $shifttype_id),
+                        form_text('title', __('title.title'), $title),
+                        form_select('rid', __('Location'), $locations, $rid),
+                    ]),
+                    div('col-md-6 col-xl-7', [
+                        div('row', [
+                            div('col', [
+                                form_textarea('description', __('Additional description'), $description),
+                                form_info(
+                                    '',
+                                    __('This description is for single shifts, otherwise please use the description in shift type.')
+                                ),
+                            ]),
+                        ]),
+                        div('row mt-2', [
+                            form_text(
+                                'tags',
+                                __('form.tags')
+                                . ' <span class="bi bi-info-circle-fill text-info" data-bs-toggle="tooltip" title="'
+                                . htmlspecialchars(__('form.tags.info'))
+                                . '"></span>',
+                                $shift->tags->implode('name', ', ')
+                            ),
+                        ]),
+                    ]),
+                ]),
+                div('row', [
+                    div('col-md-6 col-xl-5', [
+                        div('row', [
+                            div('col-lg-6', [
+                                form_datetime('start', __('shifts.start'), $start),
+                            ]),
+                            div('col-lg-6', [
+                                form_datetime('end', __('shifts.end'), $end),
+                            ]),
+                        ]),
+                    ]),
+                    div('col-md-6 col-xl-7', [
+                        '<h4>' . __('Needed angels') . '</h4>',
+                        div('row', [
+                            $angel_types_spinner,
+                        ]),
+                    ]),
+                ]),
                 form_submit('submit', icon('save') . __('form.save')),
             ]),
         ]
@@ -241,6 +292,7 @@ function shift_delete_controller(): void
     }
 
     $shift_id = $request->input('delete_shift');
+    /** @var Shift $shift */
     $shift = Shift::findOrFail($shift_id);
 
     event('shift.deleting', ['shift' => $shift]);
@@ -248,9 +300,12 @@ function shift_delete_controller(): void
     $shift->delete();
 
     engelsystem_log(
-        'Deleted shift ' . $shift->title . ': ' . $shift->shiftType->name
+        'Deleted shift ' . $shift->title . ' (' . $shift->id . ')' . ': ' . $shift->shiftType->name
         . ' from ' . $shift->start->format('Y-m-d H:i')
         . ' to ' . $shift->end->format('Y-m-d H:i')
+        . ' in ' . $shift->location->name
+        . ' with tags "' . $shift->tags->implode('name', ', ') . '"'
+        . ' and description "' . $shift->description . '"'
     );
     success(__('Shift deleted.'));
 
@@ -280,7 +335,9 @@ function shift_controller()
         throw_redirect(url('/user-shifts'));
     }
 
-    $shift = Shift($request->input('shift_id'));
+    $shift = Shift::with(['shiftEntries.user.state', 'shiftEntries.angelType'])
+        ->findOrFail($request->input('shift_id'));
+    $shift = Shift($shift);
     if (empty($shift)) {
         error(__('Shift could not be found.'));
         throw_redirect(url('/user-shifts'));

@@ -44,6 +44,17 @@ class ShiftCalendarShiftRenderer
         $blocks = ceil(($shift->end->timestamp - $shift->start->timestamp) / ShiftCalendarRenderer::SECONDS_PER_ROW);
         $blocks = max(1, $blocks);
 
+        $tags = '';
+        if ($shift->tags->count()) {
+            $tags = '<li class="list-group-item d-flex align-items-center">';
+            foreach ($shift->tags as $tag) {
+                $tags .= ' <a href="' . url('/user-shifts', ['tag' => $tag->id]) . '">'
+                    . '<span class="badge bg-secondary me-1">' . $tag->name . '</span>'
+                    . '</a>';
+            }
+            $tags .= '</li>';
+        }
+
         return [
             $blocks,
             div(
@@ -57,6 +68,7 @@ class ShiftCalendarShiftRenderer
                         div('card-body ' . $this->classBg(), [
                             $info_text,
                             location_name_render($shift->location),
+                            $tags,
                         ]),
                         $shifts_row,
                     ]
@@ -94,7 +106,7 @@ class ShiftCalendarShiftRenderer
         foreach ($needed_angeltypes as $needed_angeltype) {
             $shift_entries_filtered[$needed_angeltype['id']] = [];
         }
-        foreach ($shift_entries as $shift_entry) {
+        foreach (collect($shift_entries)->sortBy('user.name', SORT_STRING | SORT_FLAG_CASE) as $shift_entry) {
             $shift_entries_filtered[$shift_entry->angel_type_id][] = $shift_entry;
         }
 
@@ -117,6 +129,7 @@ class ShiftCalendarShiftRenderer
                 $html .= $angeltype_html;
             }
         }
+
         if (is_null($shift_signup_state)) {
             $shift_signup_state = new ShiftSignupState(ShiftSignupStatus::SHIFT_ENDED, 0);
         }
@@ -130,6 +143,7 @@ class ShiftCalendarShiftRenderer
             );
             $html .= '</li>';
         }
+
         if ($html != '') {
             return [
                 $shift_signup_state,
@@ -158,7 +172,7 @@ class ShiftCalendarShiftRenderer
         $angeltype = (new AngelType())->forceFill($angeltype);
         $entry_list = [];
         foreach ($shift_entries as $entry) {
-            $class = $entry->freeloaded ? 'text-decoration-line-through' : '';
+            $class = $entry->freeloaded_by ? 'text-decoration-line-through' : '';
             $entry_list[] = '<span class="text-nowrap ' . $class . '">' . User_Nick_render($entry->user) . '</span>';
         }
         $shift_signup_state = Shift_signup_allowed(
@@ -199,7 +213,7 @@ class ShiftCalendarShiftRenderer
             ShiftSignupStatus::SHIFT_ENDED => $inner_text . ' (' . __('ended') . ')',
             // No link and add a text hint, when the shift ended
             ShiftSignupStatus::NOT_ARRIVED => $inner_text . ' (' . __('please arrive for signup') . ')',
-            ShiftSignupStatus::NOT_YET => $inner_text . ' (' . __('not yet') . ')',
+            ShiftSignupStatus::NOT_YET => $inner_text . ' (' . __('not yet possible') . ')',
             ShiftSignupStatus::ANGELTYPE => $angeltype->restricted || !$angeltype->shift_self_signup
                 // User has to be confirmed on the angeltype first or can't sign up by themselves
                 ? $inner_text . icon('mortarboard-fill')
@@ -207,7 +221,7 @@ class ShiftCalendarShiftRenderer
                 : $inner_text . '<br />'
                 . button(
                     url('/user-angeltypes', ['action' => 'add', 'angeltype_id' => $angeltype->id]),
-                    sprintf(__('Become %s'), htmlspecialchars($angeltype->name)),
+                    sprintf(__('Join %s'), htmlspecialchars($angeltype->name)),
                     'btn-sm'
                 ),
             // Shift collides or user is already signed up: No signup allowed
@@ -271,7 +285,7 @@ class ShiftCalendarShiftRenderer
                         form_submit(
                             'delete',
                             icon('trash'),
-                            'btn-' . $class . ' btn-sm border-light text-white ms-1',
+                            'btn-sm border-light text-white ms-1',
                             false,
                             'danger',
                             __('form.delete'),

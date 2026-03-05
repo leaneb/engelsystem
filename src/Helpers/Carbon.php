@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Engelsystem\Helpers;
 
+use Carbon\CarbonInterval;
+
 class Carbon extends \Carbon\Carbon
 {
     public const DATETIME_LOCAL = '!Y-m-d\TH:i';
@@ -13,6 +15,7 @@ class Carbon extends \Carbon\Carbon
     public const DATETIME_FORMATS = [
         self::DATETIME_LOCAL,
         self::DATETIME_FALLBACK,
+        self::DEFAULT_TO_STRING_FORMAT,
     ];
 
     /**
@@ -33,26 +36,19 @@ class Carbon extends \Carbon\Carbon
     }
 
     /**
-     * Parses HTML datetime-local and ISO date/time strings.
+     * Formats a CarbonInterval into a human-readable duration string consisting of hours and minutes.
+     * Format is defined in the localization files under 'general.duration.format'.
      *
-     * @return int|null Timestamp if parseable, else null
-     * @see self::DATETIME_FORMATS
+     * @param CarbonInterval $interval The interval to format
+     * @param string $format The format string, e.g. '%dh %02dm'
+     * @return string The formatted duration string
      */
-    public static function createTimestampFromDatetime(string $value): ?int
+    public static function formatDuration(CarbonInterval $interval, string $format): string
     {
-        $carbon = self::createFromDateTime($value);
-        return $carbon?->timestamp;
-    }
+        $interval->cascade();
+        $hours = floor($interval->totalHours);
+        $minutes = $interval->minutes;
 
-    /**
-     * Check if the instance is at the start of an hour.
-     *
-     * @param bool $checkMicroseconds check time at microseconds precision
-     */
-    public function isStartOfHour(bool $checkMicroseconds = false): bool
-    {
-        return $checkMicroseconds
-            ? $this->rawFormat('i:s.u') === '00:00.000000'
-            : $this->rawFormat('i:s') === '00:00';
+        return sprintf($format, $hours, $minutes);
     }
 }

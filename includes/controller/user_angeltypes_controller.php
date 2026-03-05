@@ -48,7 +48,7 @@ function user_angeltypes_unconfirmed_hint()
     return
         _e(
             'There are unconfirmed angels in %d angel type. Angel type that needs approval:',
-            'There are unconfirmed angels in %d angel types. Angel types that need approvals:',
+            'There are unconfirmed angels in %d angel types. Angel types that need approval:',
             $count,
             [$count]
         )
@@ -286,6 +286,14 @@ function user_angeltype_update_controller(): array
 
     if ($request->hasPostData('submit')) {
         $user_angeltype->supporter = $supporter;
+        if ($supporter && !$user_angeltype->confirm_user_id) {
+            $user_angeltype->confirmUser()->associate(auth()->user());
+            engelsystem_log(sprintf(
+                '%s confirmed for angel type %s',
+                User_Nick_render($user_source, true),
+                AngelType_name_render($angeltype, true)
+            ));
+        }
         $user_angeltype->save();
 
         $msg = $supporter
@@ -314,6 +322,7 @@ function user_angeltype_update_controller(): array
  */
 function user_angeltype_add_controller(): array
 {
+    /** @var AngelType $angeltype */
     $angeltype = AngelType::findOrFail(request()->input('angeltype_id'));
 
     // User is joining by itself
@@ -354,30 +363,38 @@ function user_angeltype_add_controller(): array
     if ($request->hasPostData('submit')) {
         $user_source = load_user();
 
-        if (!$angeltype->userAngelTypes()->wherePivot('user_id', $user_source->id)->exists()) {
-            $userAngelType = new UserAngelType();
-            $userAngelType->user()->associate($user_source);
-            $userAngelType->angelType()->associate($angeltype);
+        if (
+            !$angeltype
+                ->userAngelTypes()
+                ->wherePivot('user_id', $user_source->id)
+                ->wherePivotNotNull('confirm_user_id')
+                ->exists()
+        ) {
+            /** @var UserAngelType $userAngelType */
+            $userAngelType = UserAngelType::firstOrCreate([
+                'user_id' => $user_source->id,
+                'angel_type_id' => $angeltype->id,
+            ]);
+
+            $setSupporter = $request->hasPostData('set_supporter')
+                && (auth()->can('admin_angel_types') || config('supporters_can_promote'));
+            if ($setSupporter) {
+                $userAngelType->supporter = true;
+            }
+            if ($request->hasPostData('auto_confirm_user') || $setSupporter) {
+                $userAngelType->confirmUser()->associate($user_source);
+            }
             $userAngelType->save();
 
             engelsystem_log(sprintf(
-                'User %s added to %s.',
+                'User %s added to angel type %s, confirmed: %s, supporter: %s.',
                 User_Nick_render($user_source, true),
-                AngelType_name_render($angeltype, true)
+                AngelType_name_render($angeltype, true),
+                $userAngelType->confirm_user_id ? 'true' : 'false',
+                $userAngelType->supporter ? 'true' : 'false',
             ));
+
             success(sprintf(__('User %s added to %s.'), $user_source->displayName, $angeltype->name));
-
-            if ($request->hasPostData('auto_confirm_user')) {
-                $userAngelType->confirmUser()->associate($user_source);
-                $userAngelType->save();
-
-                engelsystem_log(sprintf(
-                    'User %s confirmed as %s.',
-                    User_Nick_render($user_source, true),
-                    AngelType_name_render($angeltype, true)
-                ));
-            }
-
             user_angeltype_add_email($user_source, $angeltype);
 
             throw_redirect(url('/angeltypes', ['action' => 'view', 'angeltype_id' => $angeltype->id]));
@@ -436,7 +453,7 @@ function user_angeltype_join_controller(AngelType $angeltype)
     }
 
     return [
-        sprintf(__('Become a %s'), htmlspecialchars($angeltype->name)),
+        sprintf(__('Join %s'), htmlspecialchars($angeltype->name)),
         UserAngelType_join_view($user, $angeltype),
     ];
 }

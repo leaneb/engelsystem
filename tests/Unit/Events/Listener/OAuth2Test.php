@@ -23,8 +23,7 @@ class OAuth2Test extends TestCase
     /** @var AngelType[] */
     protected array $angelTypes;
 
-    /** @var Authenticator|MockObject */
-    protected Authenticator $auth;
+    protected Authenticator | MockObject $auth;
 
     protected Config $config;
 
@@ -54,7 +53,7 @@ class OAuth2Test extends TestCase
         $this->assertNotNull($test);
         $this->assertFalse($test->pivot->supporter);
         $this->assertNull($test->pivot->confirm_user_id);
-        $this->assertTrue($this->log->hasInfoThatContains('Added to angeltype'));
+        $this->assertTrue($this->log->hasInfoThatContains('Added to angel type'));
 
         /** @var AngelType $lorem */
         $lorem = $userAngelTypes->where('pivot.angel_type_id', 42)->first();

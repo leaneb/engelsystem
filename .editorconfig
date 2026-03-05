@@ -13,7 +13,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 max_line_length = 120
 
-[{.babelrc,package.json,.eslintrc.json,.prettierrc.json}]
+[{.babelrc,package.json}]
 indent_size = 2
 
 [docker/**.conf]
@@ -45,14 +45,14 @@ indent_size = 4
 [*.sh]
 indent_size = 2
 
-[{db/*.sql,includes/**}]
+[{db/*.sql,includes/**,*.json}]
 max_line_length = unset
 
 [*.{yml,yaml}]
 indent_size = 2
 
 # Ignore for
-[{*.mo,LICENSE}]
+[{*.mo,*LICENSE*,*License*}]
 charset = unset
 end_of_line = unset
 indent_style = unset

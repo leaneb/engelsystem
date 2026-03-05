@@ -54,7 +54,7 @@ msgid "page.419.title"
 msgstr "Autorisierung ist abgelaufen"
 
 msgid "page.419.text"
-msgstr "Das angegebene CSRF Token ist ungültig oder abgelaufen"
+msgstr "Das angegebene CSRF Token ist ungültig oder abgelaufen. Bitte versuche es erneut."
 
 msgid "general.date"
 msgstr "d.m.Y"
@@ -69,7 +69,7 @@ msgid "footer.eventinfo.start_end"
 msgstr "Event vom %1$s bis %2$s"
 
 msgid "footer.issues"
-msgstr "Bugs / Features"
+msgstr "Bugs/Features"
 
 msgid "footer.github"
 msgstr "Entwicklerplattform"
@@ -88,6 +88,9 @@ msgstr "Bitte melde dich an."
 
 msgid "form.submit"
 msgstr "Absenden"
+
+msgid "form.password.placeholder"
+msgstr "**********"
 
 msgid "form.send_notification"
 msgstr "%d Benachrichtigungen versenden"
@@ -192,14 +195,17 @@ msgstr "Team %s"
 msgid "%s (not \"%s\")"
 msgstr "%s (kein \"%s\")"
 
-msgid "View"
+msgid "%s (already in shift)"
+msgstr "%s (bereits eingetragen)"
+
+msgid "form.view"
 msgstr "Ansehen"
 
 msgid "Leave"
 msgstr "Verlassen"
 
 msgid "Join"
-msgstr "Mitmachen"
+msgstr "Beitreten"
 
 msgid "Public Dashboard"
 msgstr "Öffentliches Dashboard"
@@ -249,7 +255,7 @@ msgstr "Schichteintrag gelöscht."
 
 msgid "This shift was imported from a schedule so some changes will be overwritten with the next import."
 msgstr ""
-"Diese Schicht wurde aus einem Fahrplan importiert. "
+"Diese Schicht wurde aus einem Programm importiert. "
 "Dadurch werden einige Änderungen beim nächsten Import überschrieben."
 
 msgid "Please select a location."
@@ -282,12 +288,6 @@ msgstr "Titel"
 msgid "Location:"
 msgstr "Ort:"
 
-msgid "Start:"
-msgstr "Start:"
-
-msgid "End:"
-msgstr "Ende:"
-
 msgid "Needed angels"
 msgstr "Benötigte Engel"
 
@@ -301,7 +301,7 @@ msgid "Shift could not be found."
 msgstr "Schicht konnte nicht gefunden werden."
 
 msgid "There are unconfirmed angels in %d angel type. Angel type that needs approval:"
-msgid_plural "There are unconfirmed angels in %d angel types. Angel types that need approvals:"
+msgid_plural "There are unconfirmed angels in %d angel types. Angel types that need approval:"
 msgstr[0] "Es gibt nicht freigeschaltete Engel in %d Engeltypen! Engeltyp der bestätigt werden muss:"
 msgstr[1] "Es gibt nicht freigeschaltete Engel in %d Engeltypen! Engeltypen die bestätigt werden müssen:"
 
@@ -374,8 +374,8 @@ msgstr "Du bist bereits %s."
 msgid "You joined %s."
 msgstr "Du bist %s beigetreten."
 
-msgid "Become a %s"
-msgstr "Werde ein %s"
+msgid "Join %s"
+msgstr "%s beitreten"
 
 msgid "You cannot delete yourself."
 msgstr "Du kannst Dich nicht selber löschen."
@@ -389,17 +389,8 @@ msgstr "Engel gelöscht."
 msgid "Delete %s"
 msgstr "%s löschen"
 
-msgid "Please enter a valid number of vouchers."
-msgstr "Bitte gib eine korrekte Anzahl von Gutscheinen ein."
-
-msgid "Saved the number of vouchers."
-msgstr "Anzahl der Gutscheine gespeichert."
-
 msgid "User not found."
 msgstr "Benutzer nicht gefunden."
-
-msgid "Enough"
-msgstr "Genug"
 
 msgid "All users"
 msgstr "Alle Benutzer"
@@ -464,11 +455,11 @@ msgstr "Engel nicht gefunden."
 msgid "Angel has been marked as not active."
 msgstr "Engel wurde als nicht aktiv markiert."
 
-msgid "Angel has got a T-shirt."
-msgstr "Engel hat ein T-Shirt bekommen."
+msgid "Angel has no valid T-shirt size. T-shirt was not set."
+msgstr "Engel hat keine valide T-Shirt Größe. T-Shirt wurde nicht gespeichert."
 
-msgid "Angel has got no T-shirt."
-msgstr "Engel hat kein T-Shirt bekommen."
+msgid "This Angel has no valid T-shirt size, therefore it's not possible to hand out a T-shirt."
+msgstr "Dieser Engel hat keine valide T-Shirt Größe, weswegen kein T-Shirt ausgegeben werden kann."
 
 msgid "Set active"
 msgstr "Setze aktiv"
@@ -476,11 +467,8 @@ msgstr "Setze aktiv"
 msgid "Remove active"
 msgstr "Entferne aktiv"
 
-msgid "Got T-shirt"
-msgstr "T-Shirt bekommen"
-
-msgid "Remove T-shirt"
-msgstr "Entferne T-Shirt"
+msgid "Goodie actions"
+msgstr "Goodie Aktionen"
 
 msgid "Sum"
 msgstr "Summe"
@@ -503,6 +491,9 @@ msgstr "Nr."
 msgid "general.shifts"
 msgstr "Schichten"
 
+msgid "general.info"
+msgstr "Info"
+
 msgid "Length"
 msgstr "Länge"
 
@@ -513,16 +504,16 @@ msgid "Active"
 msgstr "Aktiv"
 
 msgid "Forced"
-msgstr "Erzwungen"
+msgstr "Dauerhaft aktiv"
 
-msgid "T-shirt"
-msgstr "T-Shirt"
-
-msgid "T-shirt statistic"
-msgstr "T-Shirt Statistik"
+msgid "Food"
+msgstr "Essen"
 
 msgid "Given T-shirts"
 msgstr "Ausgegebene T-Shirts"
+
+msgid "Configured T-shirts"
+msgstr "Konfigurierte T-Shirts"
 
 msgid "Arrive angels"
 msgstr "Ankommende Engel"
@@ -535,6 +526,9 @@ msgstr "Engel wurde als angekommen markiert."
 
 msgid "Reset"
 msgstr "Zurücksetzen"
+
+msgid "Reset arrival state for %s?"
+msgstr "Angekommen-Status für %s zurücksetzen?"
 
 msgid "Planned arrival"
 msgstr "Geplanter Ankunftstag"
@@ -569,6 +563,9 @@ msgstr "Engeltyp"
 msgid "shift.next"
 msgstr "Nächste Schicht"
 
+msgid "shift.previous"
+msgstr "Vorherige Schicht"
+
 msgid "general.shift"
 msgstr "Schicht"
 
@@ -587,7 +584,7 @@ msgstr "Letzte Schicht"
 msgid "general.dect"
 msgstr "DECT"
 
-msgid "Grouprights"
+msgid "Group rights"
 msgstr "Gruppenrechte"
 
 msgid "general.name"
@@ -613,9 +610,6 @@ msgstr "Fragen beantworten"
 
 msgid "There are unanswered questions!"
 msgstr "Es gibt unbeantwortete Fragen!"
-
-msgid "Locations"
-msgstr "Orte"
 
 msgid "general.description"
 msgstr "Beschreibung"
@@ -714,13 +708,19 @@ msgid "No"
 msgstr "Nein"
 
 msgid "Force active"
-msgstr "Aktiv erzwingen"
+msgstr "Dauerhaft aktiv"
+
+msgid "Force food"
+msgstr "Unbegrenzt Essen"
 
 msgid "Edit user"
 msgstr "User bearbeiten"
 
 msgid "general.datetime"
 msgstr "d.m.Y H:i"
+
+msgid "general.duration"
+msgstr "%dh %02dmin"
 
 msgid "API Settings"
 msgstr "API Einstellungen"
@@ -730,9 +730,6 @@ msgstr "Gib bitte einen Schwänz-Kommentar ein!"
 
 msgid "Shift saved."
 msgstr "Schicht gespeichert."
-
-msgid "Ask the Heaven"
-msgstr "Frag den Himmel"
 
 msgid "The administration has not configured any locations yet."
 msgstr "Die Administratoren habe noch keine Orte eingerichtet."
@@ -801,6 +798,9 @@ msgstr ""
 "\" target=\"_blank\">JSON</a> Format (Link bitte geheimhalten, sonst musst du den API-Key in "
 "<a href=\"%s\">deinen Einstellungen</a> zurücksetzen)."
 
+msgid "Per page"
+msgstr "Pro Seite"
+
 msgid "All"
 msgstr "Alle"
 
@@ -812,9 +812,6 @@ msgstr "Abmelden"
 
 msgid "Admin"
 msgstr "Admin"
-
-msgid "Manage locations"
-msgstr "Orte verwalten"
 
 msgid "No data found."
 msgstr "Nichts gefunden."
@@ -902,9 +899,6 @@ msgstr "Fahrer"
 msgid "Has car"
 msgstr "Hat Auto"
 
-msgid "Info"
-msgstr "Info"
-
 msgid "Supporters"
 msgstr "Supporter"
 
@@ -950,14 +944,14 @@ msgstr "Meine Schicht"
 msgid "Help needed"
 msgstr "Hilfe benötigt"
 
-msgid "Other angel type needed / collides with my shifts"
-msgstr "Andere Engeltypen benötigt / kollidiert mit meinen Schichten"
+msgid "Other angel type needed/collides with my shifts"
+msgstr "Andere Engeltypen benötigt/kollidiert mit meinen Schichten"
 
 msgid "Shift is full"
 msgstr "Schicht ist voll"
 
-msgid "Shift is running/ended or you have not arrived"
-msgstr "Schicht läuft/vorbei oder du bist noch nicht angekommen"
+msgid "Shift is running/has ended, you have not arrived or signup is blocked otherwise"
+msgstr "Schicht läuft/ist vorbei, du bist noch nicht angekommen oder das eintragen ist blockiert"
 
 msgid "Add more angels"
 msgstr "Mehr Engel hinzufügen"
@@ -965,7 +959,7 @@ msgstr "Mehr Engel hinzufügen"
 msgid "%d helper needed"
 msgid_plural "%d helpers needed"
 msgstr[0] "%d Helfer benötigt"
-msgstr[1] "%d Helfer benötigt"
+msgstr[1] "%d Helfende benötigt"
 
 msgid "Sign up"
 msgstr "Eintragen"
@@ -974,13 +968,10 @@ msgid "ended"
 msgstr "vorbei"
 
 msgid "please arrive for signup"
-msgstr "Ankommen zum Eintragen"
+msgstr "Komme an um dich einzutragen"
 
-msgid "not yet"
-msgstr "noch nicht"
-
-msgid "Become %s"
-msgstr "Werde ein %s"
+msgid "not yet possible"
+msgstr "noch nicht möglich"
 
 msgid "m-d"
 msgstr "d.m."
@@ -1012,6 +1003,9 @@ msgstr "Schicht Anmeldung"
 msgid "Freeloaded"
 msgstr "Geschwänzt"
 
+msgid "Freeloaded by %s"
+msgstr "Geschwänzt gesetzt durch %s"
+
 msgid "Freeload comment (Only for shift coordination and supporters):"
 msgstr "Schwänzer Kommentar (Nur für Supporter und die Schicht-Koordination):"
 
@@ -1039,9 +1033,8 @@ msgstr "bearbeitet am %s von %s"
 msgid "History ID: %s"
 msgstr "Historien-ID: %s"
 
-msgid "This shift is in the far future and becomes available for signup at %s."
-msgstr ""
-"Diese Schicht liegt in der fernen Zukunft und du kannst dich ab %s eintragen."
+msgid "This shift is in the far future. It becomes available for signup at %s."
+msgstr "Diese Schicht liegt in der fernen Zukunft. Du kannst dich ab %s eintragen."
 
 msgid "Do you really want to add supporter rights for %s to %s?"
 msgstr "Sollen %s %s als neuen Supporter bekommen?"
@@ -1067,8 +1060,8 @@ msgstr "Möchtest Du \"%2$s\" wirklich verlassen?"
 msgid "Do you really want to add %s to %s?"
 msgstr "Möchtest Du wirklich %s zu %s hinzufügen?"
 
-msgid "Do you want to become a %2$s?"
-msgstr "Möchtest Du ein %2$s werden?"
+msgid "Do you want to join %2$s?"
+msgstr "Möchtest Du %2$s beitreten?"
 
 msgid "Confirm user"
 msgstr "Benutzer bestätigen"
@@ -1081,28 +1074,37 @@ msgstr "Zurück zum Profil"
 
 msgid ""
 "Do you really want to delete the user including all his shifts and every "
-"other piece of his data?"
+"other piece of his data? All created shifts, news, answers etc. will be reassigned to you."
 msgstr ""
 "Möchtest Du wirklich den Engel inklusive aller seiner Schichten und allen "
-"anderen seiner Daten löschen?"
+"anderen seiner Daten löschen? Alle erstellten Schichten, News, Antworten usw. werden auf dich übertragen."
 
 msgid "Your password"
 msgstr "Dein Passwort"
 
-msgid "Angel can receive another %d vouchers."
+msgid "voucher.vouchers"
+msgstr "Gutscheine"
+
+msgid "voucher.edit"
+msgstr "Gutscheine bearbeiten"
+
+msgid "voucher.eligible"
 msgstr "Engel kann noch %d Gutscheine bekommen."
 
-msgid "Angel can receive another %d vouchers and is FA."
-msgstr "Engel kann noch %d Gutscheine bekommen und ist FA."
+msgid "voucher.eligible.force"
+msgstr "Engel kann <s>&thinsp;%d&thinsp;</s> unbegrenzt Gutscheine bekommen."
 
-msgid "Number of vouchers given out"
+msgid "voucher.count"
 msgstr "Anzahl Gutscheine bekommen"
 
-msgid "Voucher"
-msgstr "Gutschein"
+msgid "user.state.vouchers"
+msgstr "%s von %s Gutscheinen bekommen"
+
+msgid "user.state.vouchers.force"
+msgstr "<s>&thinsp;%d&thinsp;</s> unendlich"
 
 msgid "Freeloads"
-msgstr "Schwänzereien"
+msgstr "Geschwänzt"
 
 msgid "Last login"
 msgstr "Letzter Login"
@@ -1125,9 +1127,6 @@ msgstr "Austragen"
 msgid "Sum:"
 msgstr "Summe:"
 
-msgid "T-shirt score"
-msgstr "T-Shirt Score"
-
 msgid "Work log entry"
 msgstr "Arbeitseinsatz"
 
@@ -1149,17 +1148,14 @@ msgstr "Du hast genug gemacht."
 msgid "%s has done enough."
 msgstr "%s hat genug gemacht."
 
-msgid "Vouchers"
-msgstr "Gutscheine"
-
 msgid "iCal Export"
 msgstr "iCal Export"
 
 msgid "JSON Export"
 msgstr "JSON Export"
 
-msgid "Night shifts between %d and %d am are multiplied by %d for the %s score."
-msgstr "Nachtschichten zwischen %d und %d Uhr werden für den %4$s Score mit %3$d multipliziert."
+msgid "Night shifts between %d and %d am are multiplied by %d for the goodie score."
+msgstr "Nachtschichten zwischen %d und %d Uhr werden für den Goodie Score mit %3$d multipliziert."
 
 msgid ""
 "Go to the <a href=\"%s\">shifts table</a> to sign yourself up for some "
@@ -1182,12 +1178,6 @@ msgstr "Angekommen am %s"
 
 msgid "Not arrived (Planned: %s)"
 msgstr "Nicht angekommen (Geplant: %s)"
-
-msgid "Got %s of %s vouchers"
-msgstr "%s von %s Gutscheinen bekommen"
-
-msgid "Got no vouchers"
-msgstr "Keine Gutscheine bekommen"
 
 msgid "out of %s"
 msgstr "von %s"
@@ -1236,17 +1226,17 @@ msgstr ""
 "Hier kannst du den Benutzer Eintrag ändern. Unter dem Punkt 'Angekommen' wird der Engel als anwesend markiert, "
 "ein Ja bei Aktiv bedeutet, dass der Engel aktiv war."
 
-msgid ""
-"If the angel is active, it can claim a T-shirt. If T-shirt is set to 'Yes', the angel already got their T-shirt."
-msgstr ""
-"Ist der Engel Aktiv, hat er damit Anspruch auf ein T-Shirt. Wenn T-Shirt ein 'Ja' enthält, bedeutet dies, "
-"dass der Engel bereits sein T-Shirt erhalten hat."
-
 msgid "Here you can reset the password of this angel:"
 msgstr "Hier kannst du das Passwort für diesen Engel zurücksetzen:"
 
 msgid "Here you can define the user groups of the angel:"
 msgstr "Hier kannst du die Benutzergruppen des Engels definieren:"
+
+msgid "You cannot remove the default group."
+msgstr "Du kannst die Standard-Benutzergruppe nicht entfernen."
+
+msgid "You removed the default group, this has unintended side effects!"
+msgstr "Du hast die Standard-Benutzergruppe entfernt, dies führt zu unerwarteten Nebeneffekten!"
 
 msgid "User groups saved."
 msgstr "Benutzergruppen gespeichert."
@@ -1294,13 +1284,10 @@ msgstr "Goodie Statistik"
 msgid "Remove goodie"
 msgstr "Goodie entfernen"
 
-msgid "Got goodie"
-msgstr "Goodie bekommen"
-
-msgid "Angel has got a goodie."
+msgid "Angel got a goodie."
 msgstr "Engel hat ein Goodie bekommen."
 
-msgid "Angel has got no goodie."
+msgid "Angel got no goodie."
 msgstr "Engel hat kein Goodie bekommen."
 
 msgid "page.404.text"
@@ -1335,6 +1322,9 @@ msgstr "Alle löschen"
 msgid "form.updated"
 msgstr "Aktualisiert"
 
+msgid "form.generate"
+msgstr "Generieren"
+
 msgid "form.cancel"
 msgstr "Abbrechen"
 
@@ -1346,6 +1336,12 @@ msgstr "Pflichtfeld"
 
 msgid "form.user_select"
 msgstr "Wähle einen User"
+
+msgid "form.tags"
+msgstr "Tags"
+
+msgid "form.tags.info"
+msgstr "Komma separierte Liste von Tags"
 
 msgid "schedule.import"
 msgstr "Programm importieren"
@@ -1463,7 +1459,7 @@ msgid "news.edit.message"
 msgstr "Nachricht"
 
 msgid "news.edit.hint"
-msgstr "Du kannst Markdown und den [more] Tag benutzen"
+msgstr "Du kannst Markdown verwenden sowie den [more] Tag um die Vorschau vom Text zu trennen."
 
 msgid "news.delete.title"
 msgstr "News \"%s\" löschen"
@@ -1479,6 +1475,9 @@ msgstr "Du kannst sie dir unter %3$s anschauen."
 
 msgid "form.search"
 msgstr "Suchen"
+
+msgid "form.exact_match"
+msgstr "Genaue Übereinstimmung"
 
 msgid "log.log"
 msgstr "Logs"
@@ -1543,6 +1542,13 @@ msgstr "Diese E-Mail-Adresse ist bereits vergeben."
 msgid "settings.profile.email_shiftinfo"
 msgstr "Das %s darf mir E-Mails senden (z.B. wenn sich meine Schichten ändern)."
 
+msgid "registration.email_system"
+msgstr "Das %s darf mir E-Mails senden "
+"(z.B. wenn sich meine Schichten ändern, ich neue private Nachrichten bekomme oder es neue News gibt)."
+
+msgid "registration.email_system.info"
+msgstr "Genauere Einstellungen sind in deinem Profil möglich."
+
 msgid "settings.profile.email_news"
 msgstr "Benachrichtige mich bei neuen News."
 
@@ -1561,10 +1567,9 @@ msgstr "Um gegebenenfalls Voucher für das nächste gleichartige Event zu erhalt
 "dass mein Nick, E-Mail-Adresse, geleistete Arbeit und T-Shirt-Größe solange gespeichert werden."
 
 msgid "settings.profile.privacy"
-msgstr "Dies kann jederzeit durch eine E-Mail an <a href=\"mailto:%s\">%1$s</a> widerrufen werden."
-
-msgid "settings.profile.shirt_size"
-msgstr "T-Shirt-Größe"
+msgstr ""
+"Diese Zustimmung kann während des Events in den Profil-Einstellungen, sowie, auch nach dem Event, "
+"per E-Mail an <a href=\"mailto:%s\">%1$s</a>, widerrufen werden."
 
 msgid "settings.profile.shirt_size.hint"
 msgstr "Ein straight-cut T-Shirt hat breite Schultern und einen fast quadratischen Körper. "
@@ -1578,6 +1583,12 @@ msgstr "Mehr Informationen"
 
 msgid "settings.profile.angeltypes.info"
 msgstr "Du kannst deine Engeltypen <a href=\"%s\">auf der Engeltypen-Seite</a> verwalten."
+
+msgid "profile.my_shifts"
+msgstr "Meine Schichten"
+
+msgid "settings.profile"
+msgstr "Profil"
 
 msgid "settings.password"
 msgstr "Passwort"
@@ -1682,7 +1693,7 @@ msgid "settings.certificates.drive_confirmed.hint"
 msgstr "Dein Führerschein wurde bestätigt, du kannst deine Angaben nicht mehr selber ändern."
 
 msgid "settings.certificates.confirmation.info"
-msgstr "Du hast persönlich überprüft, dass die Zertifizierung / Bescheinigung den Anforderungen genügt."
+msgstr "Du hast persönlich überprüft, dass die Zertifizierung/Bescheinigung den Anforderungen genügt."
 
 msgid "settings.certificates.success"
 msgstr "Zertifikate wurden erfolgreich aktualisiert."
@@ -1773,6 +1784,9 @@ msgstr "Login mit %s"
 msgid "form.connect"
 msgstr "Verbinden"
 
+msgid "form.all"
+msgstr "Alle"
+
 msgid "form.disconnect"
 msgstr "Trennen"
 
@@ -1818,32 +1832,44 @@ msgstr "Frage \"%s\" löschen"
 msgid "question.contact_options"
 msgstr "Weitere Kontaktmöglichkeiten: "
 
-msgid "user.edit.shirt"
-msgstr "T-Shirt bearbeiten"
+msgid "tag.tags"
+msgstr "Tags"
+
+msgid "tag.edit"
+msgstr "Tag bearbeiten"
+
+msgid "tag.add"
+msgstr "Tag erstellen"
+
+msgid "tag.delete.title"
+msgstr "Tag \"%s\" löschen"
 
 msgid "user.edit.goodie"
 msgstr "Goodie bearbeiten"
 
-msgid "form.shirt"
-msgstr "T-Shirt"
+msgid "user.goodie_score.enough"
+msgstr "Genug"
+
+msgid "user.goodie_score"
+msgstr "Goodie Score: %s"
 
 msgid "user.shirt_size"
-msgstr "T-Shirt größe"
+msgstr "T-Shirt-Größe"
 
 msgid "user.active"
 msgstr "Aktiv"
 
 msgid "user.force_active"
-msgstr "Aktiv (erzwungen)"
+msgstr "Dauerhaft aktiv"
+
+msgid "user.force_food"
+msgstr "Unbegrenzt Essen"
 
 msgid "user.arrived"
 msgstr "Angekommen"
 
 msgid "user.arrive"
 msgstr "Ankommen"
-
-msgid "user.got_shirt"
-msgstr "T-Shirt bekommen"
 
 msgid "user.got_goodie"
 msgstr "Goodie bekommen"
@@ -1875,8 +1901,11 @@ msgstr "Einsatzdatum"
 msgid "worklog.hours"
 msgstr "Arbeitsstunden"
 
-msgid "worklog.comment"
-msgstr "Kommentar"
+msgid "worklog.description"
+msgstr "Beschreibung"
+
+msgid "worklog.night_shift"
+msgstr "Arbeitseinsatz ist eine Nachtschicht"
 
 msgid "worklog.delete"
 msgstr "Arbeitseinsatz löschen"
@@ -1891,7 +1920,8 @@ msgid "angeltypes.about"
 msgstr "Teams-/Aufgabenbeschreibung"
 
 msgid "angeltypes.about.text"
-msgstr "Hier findest Du die Liste der Teams und ihrer Aufgaben. Wenn Du weitere Fragen hast, schaue in den FAQ nach."
+msgstr "Hier findest Du die Liste der Teams und ihrer Aufgaben. Wenn Du weitere Fragen hast, "
+"schaue in den <a href=\"%s\">FAQ</a> nach."
 
 msgid "angeltypes.restricted.hint"
 msgstr "Dieser Engeltyp benötigt eine Einweisung bei einem Einführungstreffen. "
@@ -1907,6 +1937,21 @@ msgid "angeltypes.hide_on_shift_view.info"
 msgstr "Wenn ausgewählt, können nur Admins und Mitglieder des Engeltyps auf der "
 "Schicht Seite die Filteroption für diesen Engeltyp sehen."
 
+msgid "angeltypes.qr"
+msgstr "Engeltyp \"%s\" beitreten QR Code"
+
+msgid "angeltypes.qr.expires"
+msgstr "Läuft ab %c"
+
+msgid "angeltypes.qr.expired"
+msgstr "Abgelaufen"
+
+msgid "angeltypes.qr.time"
+msgstr "Lebensdauer (Minuten)"
+
+msgid "angeltypes.qr.time.info"
+msgstr "Der Link ist für die gesamte angegebene Zeitspanne gültig und kann nicht zurückgezogen werden!"
+
 msgid "location.location"
 msgstr "Ort"
 
@@ -1917,7 +1962,7 @@ msgid "location.map_url"
 msgstr "Karte"
 
 msgid "location.required_angels"
-msgstr "Benötigte Engel (bei Fahrplan import)"
+msgstr "Benötigte Engel (bei Programmimport/-kopie)"
 
 msgid "location.map_url.info"
 msgstr "Die Karte wird auf der Ort-Seite als iframe eingebettet."
@@ -1944,7 +1989,13 @@ msgid "shifttype.delete.title"
 msgstr "Schichttyp \"%s\" löschen"
 
 msgid "shifttype.required_angels"
-msgstr "Benötigte Engel (bei Fahrplan import)"
+msgstr "Benötigte Engel (bei Programmimport/-kopie)"
+
+msgid "shifttype.edit.signup_advance_hours"
+msgstr "Selbsteintragen im voraus in Stunden"
+
+msgid "shifttype.edit.signup_advance_hours.info"
+msgstr "Anzahl Stunden vor Schicht start in welchen die Eintragung möglich ist"
 
 msgid "event.day"
 msgstr "Tag %1$d"
@@ -1964,6 +2015,11 @@ msgstr "Eventdaten"
 msgid "registration.what_todo"
 msgstr "Was möchtest Du machen?"
 
+msgid "registration.jobs"
+msgstr ""
+"Weitere Informationen wie Du uns helfen kannst findest du in der "
+"<a href=\"%s\" target=\"_blank\">Teams-/Aufgabenbeschreibung</a>."
+
 msgid "registration.register"
 msgstr "Registrieren"
 
@@ -1981,6 +2037,12 @@ msgstr "Anzahl"
 
 msgid "general.created_at"
 msgstr "Erstellt am"
+
+msgid "general.url"
+msgstr "URL"
+
+msgid "general.qr"
+msgstr "QR Code"
 
 msgid "shifts.history"
 msgstr "Schichten Historie"
@@ -2082,3 +2144,9 @@ msgstr "Konfiguration"
 
 msgid "config.edit.success"
 msgstr "Konfiguration erfolgreich angepasst"
+
+msgid "config.warning_from_env"
+msgstr "Konfiguration wird aus ENV variable überschrieben!"
+
+msgid "config.warning_file_not_writable"
+msgstr "Konfigurationsdatei config.local.php ist nicht beschreibbar!"

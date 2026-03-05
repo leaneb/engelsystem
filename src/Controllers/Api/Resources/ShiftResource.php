@@ -7,11 +7,12 @@ namespace Engelsystem\Controllers\Api\Resources;
 use Engelsystem\Models\BaseModel;
 use Engelsystem\Models\Shifts\Shift;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Collection;
 
 class ShiftResource extends BasicResource
 {
-    protected Collection | BaseModel | Shift $model;
+    protected Collection | BaseModel | Pivot | Shift $model;
 
     public function toArray(array | Arrayable $location = []): array
     {
@@ -23,6 +24,7 @@ class ShiftResource extends BasicResource
             'ends_at' => $this->model->end,
             'location' => LocationResource::toIdentifierArray($location),
             'shift_type' => ShiftTypeResource::toIdentifierArray($this->model->shiftType),
+            'schedule_guid' => $this->model->scheduleShift?->guid,
             'created_at' => $this->model->created_at,
             'updated_at' => $this->model->updated_at,
             'url' => url('/shifts', ['action' => 'view', 'shift_id' => $this->model->id]),

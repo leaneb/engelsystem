@@ -1,5 +1,5 @@
 parameters:
-    phpVersion: 80100
+    phpVersion: 80200
     level: 1
     paths:
         - config
@@ -11,5 +11,5 @@ parameters:
     ignoreErrors:
         -
             message: '#.*#'
-            path: config/config.php
+            path: config/config.php*
             reportUnmatched: false

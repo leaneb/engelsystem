@@ -1,4 +1,4 @@
-{% extends 'admin/locations/index.twig' %}
+{% extends 'pages/locations/index.twig' %}
 {% import 'macros/base.twig' as m %}
 {% import 'macros/form.twig' as f %}
 
@@ -25,6 +25,7 @@
                     'type': 'url',
                     'value': f.formData('map_url', location ? location.map_url : ''),
                     'info': __('location.map_url.info'),
+                    'max_length': 300,
                 }) }}
 
                 {{ f.textarea('description', __('general.description'), {

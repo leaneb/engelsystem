@@ -187,8 +187,8 @@ class ShiftCalendarRenderer
             // Add angel types from shift entries without reference from needed angel types
             foreach (
                 $shift->shiftEntries
-                    ->groupBy('angel_type_id')
-                    ->whereNotIn('angel_type_id', $needed_angeltypes->pluck('id')) as $shiftEntriesOfAngelType
+                    ->whereNotIn('angel_type_id', $needed_angeltypes->pluck('id'))
+                    ->groupBy('angel_type_id') as $shiftEntriesOfAngelType
             ) {
                 /** @var Collection|ShiftEntry[] $shiftEntriesOfAngelType */
                 /** @var AngelType $angeltype */
@@ -201,7 +201,7 @@ class ShiftCalendarRenderer
                     'angel_type_id' => $angeltype->id,
                     'count' => $shift->shiftEntries
                         ->where('angel_type_id', $angeltype->id)
-                        ->where('freeloaded', false)
+                        ->whereNull('freeloaded_by')
                         ->count(),
                     'name' => $angeltype->name,
                     'restricted' => $angeltype->restricted,
@@ -241,10 +241,10 @@ class ShiftCalendarRenderer
      */
     private function renderTick($time, $label = false)
     {
-        $time = Carbon::createFromTimestamp($time);
+        $time = Carbon::createFromTimestamp($time, Carbon::now()->timezone);
         $class = $label ? 'tick bg-' . theme_type() : 'tick ';
 
-        $diffNow = $time->diffInMinutes(null, false) * 60;
+        $diffNow = $time->diffInMinutes() * 60;
         if ($diffNow >= 0 && $diffNow < self::SECONDS_PER_ROW) {
             $class .= ' now';
         }
@@ -348,7 +348,7 @@ class ShiftCalendarRenderer
             badge(__('Help needed'), 'danger'),
             badge(__('Other angel type needed / collides with my shifts'), 'warning'),
             badge(__('Shift is full'), 'success'),
-            badge(__('Shift is running/ended or you have not arrived'), 'secondary'),
+            badge(__('Shift is running/has ended, you have not arrived or signup is blocked otherwise'), 'secondary'),
         ]);
     }
 }

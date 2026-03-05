@@ -7,12 +7,12 @@ namespace Engelsystem\Controllers\Admin;
 use Engelsystem\Config\Config;
 use Engelsystem\Controllers\BaseController;
 use Engelsystem\Controllers\HasUserNotifications;
+use Engelsystem\Helpers\Authenticator;
 use Engelsystem\Http\Exceptions\HttpForbidden;
 use Engelsystem\Http\Exceptions\HttpNotFound;
-use Engelsystem\Http\Response;
 use Engelsystem\Http\Redirector;
 use Engelsystem\Http\Request;
-use Engelsystem\Helpers\Authenticator;
+use Engelsystem\Http\Response;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\User\User;
 use Psr\Log\LoggerInterface;
@@ -181,6 +181,8 @@ class UserSettingsController extends BaseController
             array_merge([
                 'settings_menu' => $this->settingsMenu($user),
                 'is_admin' => true,
+                'ifsg' => $this->isIfsgSupporter() || $this->auth->can('user.ifsg.edit'),
+                'driver_license' => $this->isDriverLicenseSupporter() || $this->auth->can('user.drive.edit'),
                 'admin_user' => $user,
             ], $data)
         );

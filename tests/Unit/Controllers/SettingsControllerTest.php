@@ -9,22 +9,23 @@ use Engelsystem\Config\Config;
 use Engelsystem\Config\GoodieType;
 use Engelsystem\Controllers\NotificationType;
 use Engelsystem\Controllers\SettingsController;
+use Engelsystem\Helpers\Authenticator;
 use Engelsystem\Http\Exceptions\HttpNotFound;
+use Engelsystem\Http\Exceptions\ValidationException;
 use Engelsystem\Http\Redirector;
 use Engelsystem\Http\Response;
+use Engelsystem\Http\UrlGenerator;
+use Engelsystem\Http\Validation\Validator;
 use Engelsystem\Models\AngelType;
+use Engelsystem\Models\OAuth;
 use Engelsystem\Models\Session as SessionModel;
 use Engelsystem\Models\User\License;
 use Engelsystem\Models\User\Settings;
+use Engelsystem\Models\User\User;
+use Engelsystem\Test\Unit\HasDatabase;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\HttpFoundation\Session\Session;
-use Engelsystem\Helpers\Authenticator;
-use Engelsystem\Test\Unit\HasDatabase;
-use Engelsystem\Http\UrlGenerator;
-use Engelsystem\Models\User\User;
-use Engelsystem\Http\Validation\Validator;
-use Engelsystem\Http\Exceptions\ValidationException;
 
 class SettingsControllerTest extends ControllerTest
 {
@@ -460,7 +461,7 @@ class SettingsControllerTest extends ControllerTest
         $this->request = $this->request->withParsedBody(['select_theme' => 2]);
 
         $this->setExpects($this->auth, 'user', null, $this->user, $this->once());
-        $this->expectException(HttpNotFound::class);
+        $this->expectException(ValidationException::class);
 
         $this->controller->saveTheme($this->request);
     }
@@ -501,7 +502,7 @@ class SettingsControllerTest extends ControllerTest
                 $this->assertArrayHasKey('settings_menu', $data);
                 $this->assertArrayHasKey('languages', $data);
                 $this->assertArrayHasKey('current_language', $data);
-                $this->assertEquals(['en_US' => 'English', 'de_DE' => 'Deutsch'], $data['languages']);
+                $this->assertEquals(['en_US' => 'language.en_US', 'de_DE' => 'language.de_DE'], $data['languages']);
                 $this->assertEquals('en_US', $data['current_language']);
 
                 return $this->response;
@@ -531,7 +532,7 @@ class SettingsControllerTest extends ControllerTest
         $this->request = $this->request->withParsedBody(['select_language' => 'unknown']);
 
         $this->setExpects($this->auth, 'user', null, $this->user, $this->once());
-        $this->expectException(HttpNotFound::class);
+        $this->expectException(ValidationException::class);
 
         $this->controller->saveLanguage($this->request);
     }
@@ -1001,6 +1002,22 @@ class SettingsControllerTest extends ControllerTest
     }
 
     /**
+     * @covers \Engelsystem\Controllers\SettingsController::checkOauthHidden
+     */
+    public function testSettingsMenuWithOAuthShownWhenConnected(): void
+    {
+        // Provider configured as hidden
+        $providersHidden = ['foo' => ['lorem' => 'ipsum', 'hidden' => true]];
+        config(['oauth' => $providersHidden]);
+
+        OAuth::factory()->create(['provider' => 'foo', 'user_id' => $this->user->id]);
+
+        $menu = $this->controller->settingsMenu();
+        $this->assertArrayHasKey('http://localhost/settings/oauth', $menu);
+        $this->assertEquals(['title' => 'settings.oauth', 'hidden' => false], $menu['http://localhost/settings/oauth']);
+    }
+
+    /**
      * @covers \Engelsystem\Controllers\SettingsController::settingsMenu
      */
     public function testSettingsMenuWithoutOAuth(): void
@@ -1092,18 +1109,11 @@ class SettingsControllerTest extends ControllerTest
             1 => ['name' => 'Engelsystem dark'],
         ];
         $languages = [
-            'en_US' => 'English',
-            'de_DE' => 'Deutsch',
+            'en_US',
+            'de_DE',
         ];
         $tshirt_sizes = ['S' => 'Small'];
-        $requiredFields = [
-            'pronoun'     => false,
-            'firstname'   => false,
-            'lastname'    => false,
-            'tshirt_size' => true,
-            'mobile'      => false,
-            'dect'        => false,
-        ];
+        $requiredFields = ['tshirt_size'];
         $this->config = new Config([
             'password_min_length' => 6,
             'themes' => $themes,

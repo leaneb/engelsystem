@@ -1,6 +1,7 @@
 <?php
 
 use Engelsystem\Models\User\User;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 /**
@@ -183,7 +184,7 @@ function toolbar_item_link($href, $icon, $label, $active = false)
         . '</li>';
 }
 
-function toolbar_dropdown_item(string $href, string $label, bool $active, string $icon = null): string
+function toolbar_dropdown_item(string $href, string $label, bool $active, ?string $icon = null): string
 {
     return strtr(
         '<li><a class="dropdown-item{active}" {aria} href="{href}">{icon} {label}</a></li>',
@@ -195,11 +196,6 @@ function toolbar_dropdown_item(string $href, string $label, bool $active, string
             '{aria}' => $active ? ' aria-current="page"' : '',
         ]
     );
-}
-
-function toolbar_dropdown_item_divider(): string
-{
-    return '<li><hr class="dropdown-divider"></li>';
 }
 
 /**
@@ -320,7 +316,7 @@ function render_table($columns, $rows, $data = true)
         return info(__('No data found.'), true);
     }
 
-    $html = '<table class="table table-striped' . ($data ? ' data' : '') . '">';
+    $html = '<table class="table table-striped table-sticky-header' . ($data ? ' data' : '') . '">';
     $html .= '<thead><tr>';
     foreach ($columns as $key => $column) {
         $html .= '<th class="column_' . $key . '">' . $column . '</th>';
@@ -425,13 +421,80 @@ function table_buttons($buttons = [], $additionalClass = '')
 
 function user_info_icon(User $user): string
 {
-    if (!auth()->can('admin_arrive') || !$user->state->user_info) {
+    if (!auth()->can('user.info.hint') || !$user->state->user_info) {
         return '';
     }
     $infoIcon = ' <small><span class="bi bi-info-circle-fill text-info" ';
-    if (auth()->can('user.info.show')) {
+    if (auth()->can('user.info.view')) {
         $infoIcon .= 'data-bs-toggle="tooltip" title="' . htmlspecialchars($user->state->user_info) . '"';
     }
     $infoIcon .= '></span></small>';
     return $infoIcon;
+}
+
+function pagination(LengthAwarePaginator $paginator, ?int $selectionSteps = null): string
+{
+    $paginator->appends(request()->getQueryParams());
+
+    $items = '';
+    foreach ($paginator->getUrlRange(1, $paginator->lastPage()) as $page => $url) {
+        $active = '';
+
+        if ($paginator->currentPage() == $page) {
+            $active = ' active';
+        }
+
+        $items .= sprintf(
+            '<li class="page-item%s"><a class="page-link" href="%s">%u</a></li>',
+            $active,
+            $url,
+            $page
+        );
+    }
+
+    if ($selectionSteps) {
+        $selections = [];
+        foreach ([$selectionSteps, $selectionSteps * 5, $selectionSteps * 10] as $selection) {
+            $url = $paginator->appends('c', $selection)->url(1);
+            $selections[] = sprintf(
+                '<li><a class="dropdown-item" href="%s">%s</a></li>',
+                $url,
+                $selection,
+            );
+        }
+        $dropdownValue = request()->get('c', $selectionSteps);
+        $dropdownValue = $dropdownValue  == 'all' || !is_numeric($dropdownValue) ? __('All') : $dropdownValue;
+        $dropdown = sprintf(
+            '
+                <span class="mb-3 m-2 ms-3">%s</span>
+                <div class="dropdown pagination mb-3 " >
+                    <button class="page-link dropdown-toggle btn"
+                        type="button" data-bs-toggle="dropdown"
+                    >
+                        %s
+                    </button>
+                    <ul class="dropdown-menu">
+                        %s
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="%s">%s</a></li>
+                    </ul>
+                </div>
+            ',
+            __('Per page'),
+            $dropdownValue,
+            implode(PHP_EOL, $selections),
+            $paginator->appends('c', 'all')->url(1),
+            __('All'),
+        );
+    }
+
+    return sprintf('
+        <nav class="d-inline-flex text-center">
+            <ul class="pagination">
+                %s
+            </ul>
+            %s
+
+        </nav>
+    ', $items, $dropdown);
 }

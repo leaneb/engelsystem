@@ -6,8 +6,8 @@ namespace Engelsystem\Models;
 
 use Engelsystem\Models\Shifts\NeededAngelType;
 use Engelsystem\Models\Shifts\ShiftEntry;
-use Illuminate\Database\Eloquent\Builder;
 use Engelsystem\Models\User\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -57,10 +57,10 @@ class AngelType extends BaseModel
         'contact_name'              => '',
         'contact_dect'              => '',
         'contact_email'             => '',
-        'restricted'                => false,
+        'restricted'                => true,
         'requires_driver_license'   => false,
         'requires_ifsg_certificate' => false,
-        'shift_self_signup'         => false,
+        'shift_self_signup'         => true,
         'show_on_dashboard'         => true,
         'hide_register'             => false,
         'hide_on_shift_view'        => false,

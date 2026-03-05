@@ -8,13 +8,13 @@ use Carbon\Carbon;
 use Engelsystem\Controllers\Metrics\Stats;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\Faq;
+use Engelsystem\Models\Location;
 use Engelsystem\Models\LogEntry;
 use Engelsystem\Models\Message;
 use Engelsystem\Models\News;
 use Engelsystem\Models\NewsComment;
 use Engelsystem\Models\OAuth;
 use Engelsystem\Models\Question;
-use Engelsystem\Models\Location;
 use Engelsystem\Models\Shifts\Shift;
 use Engelsystem\Models\Shifts\ShiftEntry;
 use Engelsystem\Models\Shifts\ShiftType;
@@ -24,6 +24,7 @@ use Engelsystem\Models\User\PersonalData;
 use Engelsystem\Models\User\Settings;
 use Engelsystem\Models\User\State;
 use Engelsystem\Models\User\User;
+use Engelsystem\Models\UserAngelType;
 use Engelsystem\Models\Worklog;
 use Engelsystem\Test\Unit\HasDatabase;
 use Engelsystem\Test\Unit\TestCase;
@@ -151,11 +152,11 @@ class StatsTest extends TestCase
     {
         $this->addUsers();
         $worklogData = [
-            'user_id'    => 1,
-            'creator_id' => 1,
-            'hours'      => 2.4,
-            'comment'    => '',
-            'worked_at'  => new Carbon(),
+            'user_id'     => 1,
+            'creator_id'  => 1,
+            'hours'       => 2.4,
+            'description' => '',
+            'worked_at'   => new Carbon(),
         ];
         (new Worklog($worklogData))->save();
         (new Worklog(['hours' => 1.2, 'user_id' => 3] + $worklogData))->save();
@@ -210,9 +211,58 @@ class StatsTest extends TestCase
     }
 
     /**
-     * @covers \Engelsystem\Controllers\Metrics\Stats::angeltypes
+     * @covers \Engelsystem\Controllers\Metrics\Stats::angelTypes
      */
-    public function testAngeltypes(): void
+    public function testAngelTypes(): void
+    {
+        (new AngelType(['id' => 1, 'name' => 'AngelType 1', 'restricted' => true]))->save();
+        (new AngelType(['id' => 2, 'name' => 'Second AngelType', 'restricted' => false]))->save();
+        (new AngelType(['id' => 3, 'name' => 'Another AngelType', 'restricted' => true]))->save();
+        (new AngelType(['id' => 4, 'name' => 'Old AngelType', 'restricted' => false]))->save();
+        UserAngelType::factory()->create(['angel_type_id' => 1, 'confirm_user_id' => 1, 'supporter' => true]);
+        UserAngelType::factory()->create(['angel_type_id' => 1, 'confirm_user_id' => null, 'supporter' => false]);
+        UserAngelType::factory()->create(['angel_type_id' => 1, 'confirm_user_id' => 1, 'supporter' => false]);
+        UserAngelType::factory()->create(['angel_type_id' => 2, 'confirm_user_id' => null, 'supporter' => true]);
+        UserAngelType::factory()->create(['angel_type_id' => 2, 'confirm_user_id' => null, 'supporter' => false]);
+        UserAngelType::factory()->create(['angel_type_id' => 2, 'confirm_user_id' => null, 'supporter' => false]);
+
+        $stats = new Stats($this->database);
+        $this->assertEquals([
+            [
+                'name' => 'AngelType 1',
+                'restricted' => true,
+                'supporters' => 1,
+                'confirmed' => 1,
+                'unconfirmed' => 1,
+            ],
+            [
+                'name' => 'Another AngelType',
+                'restricted' => true,
+                'unconfirmed' => 0,
+                'supporters' => 0,
+                'confirmed' => 0,
+            ],
+            [
+                'name' => 'Old AngelType',
+                'restricted' => false,
+                'unconfirmed' => 0,
+                'supporters' => 0,
+                'confirmed' => 0,
+            ],
+            [
+                'name' => 'Second AngelType',
+                'restricted' => false,
+                'unconfirmed' => 0,
+                'supporters' => 1,
+                'confirmed' => 2,
+            ],
+            ], $stats->angelTypes());
+    }
+
+    /**
+     * @covers \Engelsystem\Controllers\Metrics\Stats::angelTypesSum
+     */
+    public function testAngelTypesSum(): void
     {
         (new AngelType(['name' => 'AngelType 1']))->save();
         (new AngelType(['name' => 'Second AngelType']))->save();
@@ -220,13 +270,13 @@ class StatsTest extends TestCase
         (new AngelType(['name' => 'Old AngelType']))->save();
 
         $stats = new Stats($this->database);
-        $this->assertEquals(4, $stats->angeltypes());
+        $this->assertEquals(4, $stats->angelTypesSum());
     }
 
     /**
-     * @covers \Engelsystem\Controllers\Metrics\Stats::shifttypes
+     * @covers \Engelsystem\Controllers\Metrics\Stats::shiftTypes
      */
-    public function testShifttypes(): void
+    public function testShiftTypes(): void
     {
         (new ShiftType(['name' => 'ShiftType 1', 'description' => 'rtfm']))->save();
         (new ShiftType(['name' => 'Second ShiftType', 'description' => 'pebkac']))->save();
@@ -234,7 +284,7 @@ class StatsTest extends TestCase
         (new ShiftType(['name' => 'Old ShiftType', 'description' => 'layer 8']))->save();
 
         $stats = new Stats($this->database);
-        $this->assertEquals(4, $stats->shifttypes());
+        $this->assertEquals(4, $stats->shiftTypes());
     }
 
     /**
@@ -347,6 +397,17 @@ class StatsTest extends TestCase
     }
 
     /**
+     * @covers \Engelsystem\Controllers\Metrics\Stats::forceFoodUsers
+     */
+    public function testForceFoodUsers(): void
+    {
+        $this->addUsers();
+
+        $stats = new Stats($this->database);
+        $this->assertEquals(2, $stats->forceFoodUsers());
+    }
+
+    /**
      * @covers \Engelsystem\Controllers\Metrics\Stats::usersPronouns
      */
     public function testUsersPronouns(): void
@@ -378,12 +439,14 @@ class StatsTest extends TestCase
     public function testCurrentlyWorkingUsers(): void
     {
         $this->addUsers();
+        /** @var User $user1 */
+        $user1 = User::factory()->create();
         /** @var Shift $shift */
         $shift = Shift::factory()->create(['start' => Carbon::now()->subHour(), 'end' => Carbon::now()->addHour()]);
 
-        ShiftEntry::factory()->create(['shift_id' => $shift->id, 'freeloaded' => false]);
-        ShiftEntry::factory()->create(['shift_id' => $shift->id, 'freeloaded' => false]);
-        ShiftEntry::factory()->create(['shift_id' => $shift->id, 'freeloaded' => true]);
+        ShiftEntry::factory()->create(['shift_id' => $shift->id, 'freeloaded_by' => null]);
+        ShiftEntry::factory()->create(['shift_id' => $shift->id, 'freeloaded_by' => null]);
+        ShiftEntry::factory()->create(['shift_id' => $shift->id, 'freeloaded_by' => $user1->id]);
 
         $stats = new Stats($this->database);
         $this->assertEquals(3, $stats->currentlyWorkingUsers());
@@ -518,17 +581,29 @@ class StatsTest extends TestCase
     {
         $this->addUser();
         $this->addUser([], ['shirt_size' => 'L'], ['email_human' => true, 'email_shiftinfo' => true]);
-        $this->addUser(['arrived' => 1], [], ['email_human' => true, 'email_goodie' => true, 'email_news' => true]);
-        $this->addUser(['arrived' => 1], ['pronoun' => 'unicorn'], ['language' => 'lo_RM', 'email_shiftinfo' => true]);
-        $this->addUser(['arrived' => 1, 'got_voucher' => 2], ['shirt_size' => 'XXL'], ['language' => 'lo_RM']);
         $this->addUser(
-            ['arrived' => 1, 'got_voucher' => 9, 'force_active' => true, 'user_info' => 'Info'],
+            ['arrival_date' => Carbon::now()],
+            [],
+            ['email_human' => true, 'email_goodie' => true, 'email_news' => true]
+        );
+        $this->addUser(
+            ['arrival_date' => Carbon::now()],
+            ['pronoun' => 'unicorn'],
+            ['language' => 'lo_RM', 'email_shiftinfo' => true]
+        );
+        $this->addUser(
+            ['arrival_date' => Carbon::now(), 'got_voucher' => 2],
+            ['shirt_size' => 'XXL'],
+            ['language' => 'lo_RM']
+        );
+        $this->addUser(
+            ['arrival_date' => Carbon::now(), 'got_voucher' => 9, 'force_active' => true, 'user_info' => 'Info'],
             [],
             ['theme' => 1],
             ['drive_car' => true, 'drive_12t' => true, 'drive_confirmed' => true, 'ifsg_certificate_light' => true]
         );
         $this->addUser(
-            ['arrived' => 1, 'got_voucher' => 3],
+            ['arrival_date' => Carbon::now(), 'got_voucher' => 3, 'force_food' => true],
             ['pronoun' => 'per'],
             ['theme' => 1, 'email_human' => true],
             [
@@ -539,8 +614,12 @@ class StatsTest extends TestCase
                 'ifsg_confirmed' => true,
             ]
         );
-        $this->addUser(['arrived' => 1, 'active' => 1, 'got_goodie' => true, 'force_active' => true]);
-        $this->addUser(['arrived' => 1, 'active' => 1, 'got_goodie' => true], ['shirt_size' => 'L'], ['theme' => 4]);
+        $this->addUser(['arrival_date' => Carbon::now(), 'active' => 1, 'got_goodie' => true, 'force_active' => true]);
+        $this->addUser(
+            ['arrival_date' => Carbon::now(), 'active' => 1, 'got_goodie' => true, 'force_food' => true],
+            ['shirt_size' => 'L'],
+            ['theme' => 4]
+        );
     }
 
     protected function addUser(

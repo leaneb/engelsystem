@@ -72,13 +72,15 @@ $route->addGroup(
     }
 );
 
-// Stats
+// Metrics
 $route->get('/metrics', 'Metrics\\Controller@metrics');
-$route->get('/stats', 'Metrics\\Controller@stats');
 
 // Angeltypes
 $route->addGroup('/angeltypes', function (RouteCollector $route): void {
     $route->get('/about', 'AngelTypesController@about');
+    $route->get('/{angel_type_id:\d+}/qr', 'AngelTypesController@qrCode');
+    $route->post('/{angel_type_id:\d+}/qr', 'AngelTypesController@qrCode');
+    $route->get('/{angel_type_id:\d+}/join', 'AngelTypesController@join');
 });
 
 // Shifts
@@ -100,6 +102,7 @@ $route->addGroup(
 
 // FAQ
 $route->get('/faq', 'FaqController@index');
+$route->get('/faq/tag/{tag_id:\d+}', 'FaqController@tagged');
 
 // Questions
 $route->addGroup(
@@ -140,6 +143,7 @@ $route->addGroup(
 
                 $route->get('/angeltypes', 'Api\AngelTypeController@index');
                 $route->get('/angeltypes/{angeltype_id:\d+}/shifts', 'Api\ShiftsController@entriesByAngeltype');
+                $route->get('/angeltypes/{angeltype_id:\d+}/users', 'Api\UsersController@entriesByAngeltype');
 
                 $route->get('/locations', 'Api\LocationsController@index');
                 $route->get('/locations/{location_id:\d+}/shifts', 'Api\ShiftsController@entriesByLocation');
@@ -149,9 +153,11 @@ $route->addGroup(
                 $route->get('/shifttypes', 'Api\ShiftTypeController@index');
                 $route->get('/shifttypes/{shifttype_id:\d+}/shifts', 'Api\ShiftsController@entriesByShiftType');
 
+                $route->get('/users', 'Api\UsersController@index');
                 $route->get('/users/{user_id:(?:\d+|self)}', 'Api\UsersController@user');
                 $route->get('/users/{user_id:(?:\d+|self)}/angeltypes', 'Api\AngelTypeController@ofUser');
                 $route->get('/users/{user_id:(?:\d+|self)}/shifts', 'Api\ShiftsController@entriesByUser');
+                $route->get('/users/{user_id:(?:\d+|self)}/worklogs', 'Api\UsersController@worklogs');
 
                 $route->addRoute(
                     ['POST', 'PUT', 'DELETE', 'PATCH'],
@@ -239,6 +245,16 @@ $route->addGroup(
             }
         );
 
+        // Tag
+        $route->addGroup(
+            '/tags',
+            function (RouteCollector $route): void {
+                $route->get('', 'Admin\\TagController@list');
+                $route->get('/edit[/{tag_id:\d+}]', 'Admin\\TagController@edit');
+                $route->post('/edit[/{tag_id:\d+}]', 'Admin\\TagController@save');
+            }
+        );
+
         // Questions
         $route->addGroup(
             '/questions',
@@ -254,7 +270,6 @@ $route->addGroup(
         $route->addGroup(
             '/locations',
             function (RouteCollector $route): void {
-                $route->get('', 'Admin\\LocationsController@index');
                 $route->post('', 'Admin\\LocationsController@delete');
                 $route->get('/edit[/{location_id:\d+}]', 'Admin\\LocationsController@edit');
                 $route->post('/edit[/{location_id:\d+}]', 'Admin\\LocationsController@save');
@@ -288,6 +303,15 @@ $route->addGroup(
                             '/{worklog_id:\d+}/delete',
                             'Admin\\UserWorklogController@deleteWorklog'
                         );
+                    }
+                );
+
+                // Vouchers
+                $route->addGroup(
+                    '/voucher',
+                    function (RouteCollector $route): void {
+                        $route->get('', 'Admin\\UserVoucherController@editVoucher');
+                        $route->post('', 'Admin\\UserVoucherController@saveVoucher');
                     }
                 );
             }

@@ -70,6 +70,31 @@ class RequestTest extends TestCase
     }
 
     /**
+     * @covers \Engelsystem\Http\Request::get
+     */
+    public function testGet(): void
+    {
+        $request = new Request([
+            // Query / GET
+            'a' => 'From query',
+            'g' => 'From query',
+        ], [
+            // Request / POST
+            'a' => 'From request',
+            'g' => 'From request',
+            'p' => 'From request',
+        ], [
+            // Attributes
+            'a' => 'From attributes',
+        ]);
+
+        $this->assertEquals('From attributes', $request->get('a'));
+        $this->assertEquals('From query', $request->get('g'));
+        $this->assertEquals('From request', $request->get('p'));
+        $this->assertEquals('default value', $request->get('not-existing', 'default value'));
+    }
+
+    /**
      * @covers \Engelsystem\Http\Request::hasPostData
      */
     public function testHasPostData(): void
@@ -125,11 +150,11 @@ class RequestTest extends TestCase
             ->expects($this->atLeastOnce())
             ->method('getUri')
             ->willReturnOnConsecutiveCalls(
-                'http://foo.bar/bla/foo/',
+                'https://foo.bar/bla/foo/',
                 'https://lorem.ipsum/dolor/sit?amet=consetetur&sadipscing=elitr'
             );
 
-        $this->assertEquals('http://foo.bar/bla/foo', $request->url());
+        $this->assertEquals('https://foo.bar/bla/foo', $request->url());
         $this->assertEquals('https://lorem.ipsum/dolor/sit', $request->url());
     }
 
@@ -196,16 +221,16 @@ class RequestTest extends TestCase
 
         $uri->expects($this->atLeastOnce())
             ->method('__toString')
-            ->willReturn('http://foo.bar/bla?foo=bar');
+            ->willReturn('https://foo.bar/bla?foo=bar');
 
-        $request = Request::create('http://lor.em/');
+        $request = Request::create('https://lor.em/');
 
         $new = $request->withUri($uri);
         $this->assertNotEquals($request, $new);
-        $this->assertEquals('http://foo.bar/bla?foo=bar', $new->getUri());
+        $this->assertEquals('https://foo.bar/bla?foo=bar', $new->getUri());
 
         $new = $request->withUri($uri, true);
-        $this->assertEquals('http://lor.em/bla?foo=bar', $new->getUri());
+        $this->assertEquals('https://lor.em/bla?foo=bar', $new->getUri());
     }
 
     /**

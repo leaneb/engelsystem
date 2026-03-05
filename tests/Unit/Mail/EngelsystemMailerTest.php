@@ -80,7 +80,7 @@ class EngelsystemMailerTest extends TestCase
             ['foo@bar.baz', 'Lorem dolor', 'test/template.tpl', ['dev' => true]],
             true
         );
-        $this->setExpects($translator, 'getLocales', null, ['de_DE' => 'de_DE', 'en_US' => 'en_US']);
+        $this->setExpects($translator, 'getLocales', null, ['de_DE', 'en_US']);
         $this->setExpects($translator, 'getLocale', null, 'en_US');
         $this->setExpects($translator, 'translate', ['translatable.text', ['dev' => true]], 'Lorem dolor');
         $translator->expects($this->exactly(2))
@@ -109,7 +109,7 @@ class EngelsystemMailerTest extends TestCase
 
         $symfonyMailer->expects($this->once())
             ->method('send')
-            ->willReturnCallback(function (RawMessage $message, Envelope $envelope = null): void {
+            ->willReturnCallback(function (RawMessage $message, ?Envelope $envelope = null): void {
                 $this->assertStringContainsString('foo@bar.baz', $message->toString());
                 $this->assertStringContainsString('Foo Bar', $message->toString());
                 $this->assertStringContainsString('Mail test', $message->toString());

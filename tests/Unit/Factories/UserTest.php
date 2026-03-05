@@ -174,7 +174,7 @@ class UserTest extends ServiceProviderTest
                 'email' => 'notanemail',
                 'password' => 'a',
                 'tshirt_size' => 'A',
-                'planned_arrival_date' => $this->now->subDays(7),
+                'planned_arrival_date' => $this->now->subDays(7)->format('Y-m-d'),
                 'dect' => str_repeat('a', 50),
                 'mobile' => str_repeat('a', 50),
             ],
@@ -234,6 +234,7 @@ class UserTest extends ServiceProviderTest
             'planned_arrival_date' => $this->now->format('Y-m-d'),
             'tshirt_size' => 'M',
             'mobile_show' => 1,
+            'email_system' => 1,
         ]);
 
         $this->assertSame('they', $user->personalData->pronoun);
@@ -245,6 +246,9 @@ class UserTest extends ServiceProviderTest
             $user->personalData->planned_arrival_date->format('Y-m-d')
         );
         $this->assertTrue($user->settings->mobile_show);
+        $this->assertTrue($user->settings->email_shiftinfo);
+        $this->assertTrue($user->settings->email_messages);
+        $this->assertTrue($user->settings->email_news);
     }
 
     /**
@@ -280,7 +284,7 @@ class UserTest extends ServiceProviderTest
         $this->assertDataRaisesValidationException(
             [
                 'username' => 'fritz',
-                'email' => 'fritz@example.com',
+                'email' => 'different@example.com',  // Use different email to only test username uniqueness
                 'password' => 's3cret',
                 'password_confirmation' => 's3cret',
             ],
@@ -308,6 +312,33 @@ class UserTest extends ServiceProviderTest
                 'password_confirmation' => 's3cret',
             ],
             [
+                'email' => [
+                    'settings.profile.email.already-taken',
+                ],
+            ]
+        );
+    }
+
+    /**
+     * @covers \Engelsystem\Factories\User
+     */
+    public function testUsernameAndEmailAlreadyTaken(): void
+    {
+        SignUpConfig::setMinimumConfig($this->config);
+        $this->createFritz();
+
+        // Both username and email are taken - both errors should show together
+        $this->assertDataRaisesValidationException(
+            [
+                'username' => 'fritz',
+                'email' => 'fritz@example.com',
+                'password' => 's3cret',
+                'password_confirmation' => 's3cret',
+            ],
+            [
+                'username' => [
+                    'settings.profile.nick.already-taken',
+                ],
                 'email' => [
                     'settings.profile.email.already-taken',
                 ],
@@ -409,7 +440,7 @@ class UserTest extends ServiceProviderTest
                 'email' => 'fritz@example.com',
                 'password' => 's3cret',
                 'password_confirmation' => 's3cret',
-                'planned_arrival_date' => $this->now->subDays(7),
+                'planned_arrival_date' => $this->now->subDays(7)->format('Y-m-d'),
             ],
             [
                 'planned_arrival_date' =>  [

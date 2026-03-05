@@ -1,6 +1,6 @@
-{% macro angel() %}
+{% macro angel() -%}
     <span class="icon-icon_angel"></span>
-{% endmacro %}
+{%- endmacro %}
 
 {% macro icon(icon, color) %}
     <span class="bi bi-{{ icon }} {% if color %} text-{{ color }} {% endif %}"></span>
@@ -26,7 +26,7 @@
     <a href="{{ opt.url|default(url('/users', {'action': 'view', 'user_id': user.id})) }}"
             {%- if not user.state.arrived %} class="text-muted"{% endif -%}
     >
-        {{ _self.angel() }} {{ user.displayName }}
+        <span class="text-nowrap">{{ _self.angel() }} {{ user.displayName }}</span>
         {%- if opt.pronoun|default(false) and config('enable_pronoun')
             and user.personalData.pronoun %}
             ({{ user.personalData.pronoun }})
@@ -34,9 +34,25 @@
     </a>
 {% endmacro %}
 
+{% macro user_info(user, opt) %}
+    {% if user.state.user_info and can('admin_arrive') %}
+        <span
+        {% if can('user.info.hint') %}
+            data-bs-toggle="tooltip"
+            {% if can('user.info.view') %}
+                title="{{ user.state.user_info|escape('html_attr') }}"
+            {% endif %}
+        {% endif %}
+        >
+            {{ _self.icon('info-circle-fill', 'info') }}
+        </span>
+    {% endif %}
+{% endmacro %}
+
 {% macro button(label, url, opt) %}
     <a href="{{ url }}" class="btn btn-{{ opt.type|default('secondary') }}
-        {%- if opt.size is defined %} btn-{{ opt.size }}{% endif %}"
+        {%- if opt.size is defined %} btn-{{ opt.size }}{% endif %}
+        {%- if opt.class is defined %} {{ opt.class }}{% endif %}"
         {%- if opt.title is defined %} title="{{ opt.title }}"{% endif -%}
     >
         {%- if opt.icon_left is defined %}{{ _self.icon(opt.icon_left) }}{% endif %}
@@ -45,16 +61,20 @@
     </a>
 {% endmacro %}
 
-{% macro edit(url) %}
-    {{ _self.button(_self.icon('pencil'), url, {'size': 'sm', 'title': __('form.edit')}) }}
+{% macro view(url, opt) %}
+    {{ _self.button(_self.icon('eye'), url, {'type': 'info','size': 'sm', 'title': __('form.view')}|merge(opt|default({}))) }}
 {% endmacro %}
 
-{% macro back(url) %}
-    {{ _self.button(_self.icon('chevron-left'), url, {'size': 'sm', 'title': __('general.back')}) }}
+{% macro edit(url, opt) %}
+    {{ _self.button(_self.icon('pencil'), url, {'size': 'sm', 'title': __('form.edit')}|merge(opt|default({}))) }}
 {% endmacro %}
 
-{% macro add(url) %}
-    {{ _self.button(_self.icon('plus-lg'), url, {'title': __('general.add')}) }}
+{% macro back(url, opt) %}
+    {{ _self.button(_self.icon('chevron-left'), url, {'size': 'sm', 'title': __('general.back')}|merge(opt|default({}))) }}
+{% endmacro %}
+
+{% macro add(url, opt) %}
+    {{ _self.button(_self.icon('plus-lg'), url, {'size': 'sm', 'title': __('general.add')}|merge(opt|default({}))) }}
 {% endmacro %}
 
 {% macro info(text, raw) %}

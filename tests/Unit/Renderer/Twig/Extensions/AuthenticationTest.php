@@ -7,10 +7,13 @@ namespace Engelsystem\Test\Unit\Renderer\Twig\Extensions;
 use Engelsystem\Helpers\Authenticator;
 use Engelsystem\Models\User\User;
 use Engelsystem\Renderer\Twig\Extensions\Authentication;
+use Engelsystem\Test\Unit\HasDatabase;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class AuthenticationTest extends ExtensionTest
 {
+    use HasDatabase;
+
     /**
      * @covers \Engelsystem\Renderer\Twig\Extensions\Authentication::__construct
      * @covers \Engelsystem\Renderer\Twig\Extensions\Authentication::getFunctions
@@ -35,9 +38,10 @@ class AuthenticationTest extends ExtensionTest
      */
     public function testIsAuthenticated(): void
     {
+        $this->initDatabase();
         /** @var Authenticator|MockObject $auth */
         $auth = $this->createMock(Authenticator::class);
-        $user = User::factory()->make();
+        $user = new User();
 
         $auth->expects($this->exactly(4))
             ->method('user')

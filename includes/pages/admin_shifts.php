@@ -6,6 +6,7 @@ use Engelsystem\Models\Location;
 use Engelsystem\Models\Shifts\NeededAngelType;
 use Engelsystem\Models\Shifts\Shift;
 use Engelsystem\Models\Shifts\ShiftType;
+use Engelsystem\Models\Tag;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
@@ -55,12 +56,19 @@ function admin_shifts()
 
     // Load shift types
     /** @var ShiftType[]|Collection $shifttypes_source */
-    $shifttypes_source = ShiftType::all();
+    $shifttypes_source = ShiftType::query()->orderBy('name')->get();
     $no_shifttypes = $shifttypes_source->isEmpty();
     $shifttypes = [];
     foreach ($shifttypes_source as $shifttype) {
         $shifttypes[$shifttype->id] = $shifttype->name;
     }
+
+    // The shifts tags, might be empty
+    $tags = collect(explode(',', strip_request_item('tags', '')))
+        ->transform(fn($value) => trim($value))
+        ->filter(fn($value) => $value != '')
+        ->unique()
+        ->toArray();
 
     if ($request->has('preview') || $request->has('back')) {
         if ($request->has('shifttype_id')) {
@@ -76,13 +84,13 @@ function admin_shifts()
             error(__('Please select a shift type.'));
         }
 
-        // Name/Bezeichnung der Schicht, darf leer sein
+        // Name/designation of the shift, may be empty
         $title = substr(strip_request_item('title'), 0, 255);
 
-        // Beschreibung der Schicht, darf leer sein
+        // Description of the shift, may be empty
         $description = strip_request_item_nl('description');
 
-        // Auswahl der sichtbaren Locations für die Schichten
+        // Selection of the visible locations for the layers
         if (
             $request->has('lid')
             && preg_match('/^\d+$/', $request->input('lid'))
@@ -138,7 +146,7 @@ function admin_shifts()
                         'trim',
                         explode(',', $request->input('change_hours'))
                     );
-                    // Fehlende Minutenangaben ergänzen, 24 Uhr -> 00 Uhr
+                    // Add missing minutes, 24:00 -> 00:00
                     array_walk($change_hours, function (&$value) use ($valid) {
                         // Add minutes
                         if (!preg_match('/^(\d{1,2}):\d{2}$/', $value)) {
@@ -209,12 +217,12 @@ function admin_shifts()
             error(__('Please select needed angels.'));
         }
 
-        // Beim Zurück-Knopf das Formular zeigen
+        // Show the form when you press the back button
         if ($request->has('back')) {
             $valid = false;
         }
 
-        // Alle Eingaben in Ordnung
+        // All entries OK
         if ($valid) {
             if ($angelmode == 'shift_type') {
                 $needed_angel_types = NeededAngelType::whereShiftTypeId($shifttype_id)
@@ -344,7 +352,7 @@ function admin_shifts()
                         . '<span title="' . dateWithEventDay($end->format('Y-m-d')) . '">'
                         . $end->format(__('H:i'))
                         . '</span>'
-                        . ', ' . round($end->copy()->diffInMinutes($start) / 60, 2) . 'h'
+                        . ', ' . round($start->copy()->diffInMinutes($end) / 60, 2) . 'h'
                         . '<br>'
                         . location_name_render($location),
                     'title'         =>
@@ -376,11 +384,20 @@ function admin_shifts()
             if ($shiftsCount >= 100) {
                 $shiftsCreationHint = '<span class="text-danger">' . $shiftsCreationHint . '</span>';
             }
+            $tagsList = '';
+            if ($tags) {
+                $tagsList = '<br>' . __('tag.tags') . ': ';
+                foreach ($tags as $tagName) {
+                    $tagsList .= ' <span class="badge bg-secondary">' . $tagName . '</span>';
+                }
+                $tagsList .= '<br><br>';
+            }
 
             // Save as previous state to be able to reuse it
             $previousEntries += [
                 'shifttype_id' => $shifttype_id,
                 'description' => $description,
+                'tags' => implode(', ', $tags),
                 'title' => $title,
                 'lid' => $lid,
                 'start' => $request->input('start'),
@@ -403,6 +420,7 @@ function admin_shifts()
                     $hidden_types,
                     form_submit('back', icon('chevron-left') . __('general.back')),
                     $shiftsCreationHint,
+                    $tagsList,
                     table([
                         'timeslot'      => __('Time and location'),
                         'title'         => __('Type and title'),
@@ -418,6 +436,11 @@ function admin_shifts()
             || !is_array($session->get('admin_shifts_types'))
         ) {
             throw_redirect(url('/admin-shifts'));
+        }
+
+        $tagList = collect();
+        foreach ($tags as $tagName) {
+            $tagList->add(Tag::whereName($tagName)->firstOrCreate(['name' => $tagName]));
         }
 
         $transactionId = Str::uuid();
@@ -442,11 +465,14 @@ function admin_shifts()
                 }
             }
 
+            $shift->tags()->attach($tagList);
+
             engelsystem_log(
                 'Shift created: ' . $shifttypes[$shift->shift_type_id]
                 . ' (' . $shift->id . ')'
                 . ' with title ' . $shift->title
                 . ' and description ' . $shift->description
+                . ' and tags ' . $shift->tags->implode('name', ', ')
                 . ' from ' . $shift->start->format('Y-m-d H:i')
                 . ' to ' . $shift->end->format('Y-m-d H:i')
                 . ' in ' . $shift->location->name
@@ -516,8 +542,22 @@ function admin_shifts()
                         form_select('lid', __('Location'), $location_array, $lid),
                     ]),
                     div('col-md-6 col-xl-7', [
-                        form_textarea('description', __('Additional description'), $description),
-                        __('This description is for single shifts, otherwise please use the description in shift type.'),
+                        div('row', [
+                            div('col', [
+                                form_textarea('description', __('Additional description'), $description),
+                                __('This description is for single shifts, otherwise please use the description in shift type.'),
+                            ]),
+                        ]),
+                        div('row mt-2', [
+                            form_text(
+                                'tags',
+                                __('form.tags')
+                                . ' <span class="bi bi-info-circle-fill text-info" data-bs-toggle="tooltip" title="'
+                                . htmlspecialchars(__('form.tags.info'))
+                                . '"></span>',
+                                implode(', ', $tags)
+                            ),
+                        ]),
                     ]),
                 ]),
                 div('row', [
@@ -554,7 +594,7 @@ function admin_shifts()
                             false,
                             null,
                             null,
-                            '',
+                            'ms-4',
                             [
                                 'radio-name'  => 'mode',
                                 'radio-value' => 'multi',
@@ -575,7 +615,7 @@ function admin_shifts()
                             false,
                             null,
                             null,
-                            '',
+                            'ms-4',
                             [
                                 'radio-name'  => 'mode',
                                 'radio-value' => 'variable',
@@ -584,7 +624,14 @@ function admin_shifts()
                         form_checkbox(
                             'shift_over_midnight',
                             __('Create a shift over midnight.'),
-                            $shift_over_midnight
+                            $shift_over_midnight,
+                            'checked',
+                            null,
+                            'ms-0 mb-3',
+                            [
+                                'radio-name'  => 'mode',
+                                'radio-value' => 'variable',
+                            ],
                         ),
                     ]),
                     div('col-md-6 col-xl-7', [

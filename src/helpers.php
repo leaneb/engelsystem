@@ -6,6 +6,7 @@ use Engelsystem\Application;
 use Engelsystem\Config\Config;
 use Engelsystem\Events\EventDispatcher;
 use Engelsystem\Helpers\Authenticator;
+use Engelsystem\Helpers\Cache;
 use Engelsystem\Helpers\Translation\Translator;
 use Engelsystem\Http\Redirector;
 use Engelsystem\Http\Request;
@@ -19,7 +20,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
  * @return mixed|Application
  * @phpcsSuppress SlevomatCodingStandard.TypeHints.ReturnTypeHint.UselessAnnotation
  */
-function app(string $id = null): mixed
+function app(?string $id = null): mixed
 {
     if (is_null($id)) {
         return Application::getInstance();
@@ -46,12 +47,24 @@ function back(int $status = 302, array $headers = []): Response
     return $redirect->back($status, $headers);
 }
 
+function cache(string|null $key = null, mixed $default = null, int $seconds = 60 * 60): mixed
+{
+    /** @var Cache $cache */
+    $cache = app('cache');
+
+    if (empty($key)) {
+        return $cache;
+    }
+
+    return $cache->get($key, $default, $seconds);
+}
+
 /**
  * Get or set config values
  * @return mixed|Config
  * @phpcsSuppress SlevomatCodingStandard.TypeHints.ReturnTypeHint.UselessAnnotation
  */
-function config(string|array $key = null, mixed $default = null): mixed
+function config(string|array|null $key = null, mixed $default = null): mixed
 {
     /** @var Config $config */
     $config = app('config');
@@ -112,7 +125,7 @@ function redirect(string $path, int $status = 302, array $headers = []): Respons
  * @return mixed|Request
  * @phpcsSuppress SlevomatCodingStandard.TypeHints.ReturnTypeHint.UselessAnnotation
  */
-function request(string $key = null, mixed $default = null): mixed
+function request(?string $key = null, mixed $default = null): mixed
 {
     /** @var Request $request */
     $request = app('request');
@@ -143,7 +156,7 @@ function response(mixed $content = '', int $status = 200, array $headers = []): 
  * @return mixed|SessionInterface
  * @phpcsSuppress SlevomatCodingStandard.TypeHints.ReturnTypeHint.UselessAnnotation
  */
-function session(string $key = null, mixed $default = null): mixed
+function session(?string $key = null, mixed $default = null): mixed
 {
     /** @var SessionInterface $session */
     $session = app('session');
@@ -158,7 +171,7 @@ function session(string $key = null, mixed $default = null): mixed
 /**
  * Translate the given message
  */
-function trans(string $key = null, array $replace = []): string|Translator
+function trans(?string $key = null, array $replace = []): string|Translator
 {
     /** @var Translator $translator */
     $translator = app('translator');
@@ -192,7 +205,7 @@ function _e(string $key, string $keyPlural, int $number, array $replace = []): s
     return $translator->translatePlural($key, $keyPlural, $number, $replace);
 }
 
-function url(string $path = null, array $parameters = []): UrlGeneratorInterface|string
+function url(?string $path = null, array $parameters = []): UrlGeneratorInterface|string
 {
     /** @var UrlGeneratorInterface $urlGenerator */
     $urlGenerator = app('http.urlGenerator');
@@ -204,7 +217,7 @@ function url(string $path = null, array $parameters = []): UrlGeneratorInterface
     return $urlGenerator->to($path, $parameters);
 }
 
-function view(string $template = null, array $data = []): Renderer|string
+function view(?string $template = null, array $data = []): Renderer|string
 {
     /** @var Renderer $renderer */
     $renderer = app('renderer');

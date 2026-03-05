@@ -115,20 +115,17 @@ class EventDispatcherTest extends TestCase
         $this->assertEquals(['default' => 'handler'], $response);
     }
 
-    public function eventHandler(string $event): void
+    public function eventHandler(string $event, mixed ...$args): void
     {
         if (!isset($this->firedEvents[$event])) {
             $this->firedEvents[$event] = ['count' => 0];
         }
 
         $this->firedEvents[$event]['count']++;
-        $this->firedEvents[$event][] = func_get_args();
+        $this->firedEvents[$event][] = [$event, ...$args];
     }
 
-    /**
-     * @return null
-     */
-    public function returnNull()
+    public function returnNull(): null
     {
         return null;
     }

@@ -6,11 +6,11 @@ namespace Engelsystem\Controllers;
 
 use Engelsystem\Config\Config;
 use Engelsystem\Config\GoodieType;
+use Engelsystem\Helpers\Authenticator;
 use Engelsystem\Http\Exceptions\HttpNotFound;
-use Engelsystem\Http\Response;
 use Engelsystem\Http\Redirector;
 use Engelsystem\Http\Request;
-use Engelsystem\Helpers\Authenticator;
+use Engelsystem\Http\Response;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\User\User;
 use Psr\Log\LoggerInterface;
@@ -50,12 +50,12 @@ class SettingsController extends BaseController
                     && config('enable_email_goodie'),
                 'goodie_tshirt' => $this->config->get('goodie_type') === GoodieType::Tshirt->value,
                 'tShirtLink' => $this->config->get('tshirt_link'),
-                'isPronounRequired' => $requiredFields['pronoun'],
-                'isFirstnameRequired' => $requiredFields['firstname'],
-                'isLastnameRequired' => $requiredFields['lastname'],
-                'isTShirtSizeRequired' => $requiredFields['tshirt_size'],
-                'isMobileRequired' => $requiredFields['mobile'],
-                'isDectRequired' => $requiredFields['dect'],
+                'isPronounRequired' => in_array('pronoun', $requiredFields),
+                'isFirstnameRequired' => in_array('firstname', $requiredFields),
+                'isLastnameRequired' => in_array('lastname', $requiredFields),
+                'isTShirtSizeRequired' => in_array('tshirt_size', $requiredFields),
+                'isMobileRequired' => in_array('mobile', $requiredFields),
+                'isDectRequired' => in_array('dect', $requiredFields),
             ]
         );
     }
@@ -112,8 +112,8 @@ class SettingsController extends BaseController
 
         if (
             $goodie_tshirt
-            && isset(config('tshirt_sizes')[$data['shirt_size'] ?? ''])
             && !$user->state->got_goodie
+            && (isset(config('tshirt_sizes')[$data['shirt_size'] ?? '']) || is_null($data['shirt_size']))
         ) {
             $user->personalData->shirt_size = $data['shirt_size'];
         }
@@ -146,7 +146,7 @@ class SettingsController extends BaseController
         $minLength = config('password_min_length');
         $data = $this->validate($request, [
             'password'      => empty($user->password) ? 'optional' : 'required',
-            'new_password'  => 'required|min:' . $minLength,
+            'new_password'  => 'required|length:' . $minLength,
             'new_password2' => 'required',
         ]);
 
@@ -190,12 +190,8 @@ class SettingsController extends BaseController
     public function saveTheme(Request $request): Response
     {
         $user = $this->auth->user();
-        $data = $this->validate($request, ['select_theme' => 'int']);
+        $data = $this->validate($request, ['select_theme' => 'int|in:' . implode(',', array_keys(config('themes')))]);
         $selectTheme = $data['select_theme'];
-
-        if (!isset(config('themes')[$selectTheme])) {
-            throw new HttpNotFound('Theme with id ' . $selectTheme . ' does not exist.');
-        }
 
         $user->settings->theme = $selectTheme;
         $user->settings->save();
@@ -207,7 +203,10 @@ class SettingsController extends BaseController
 
     public function language(): Response
     {
-        $languages = config('locales');
+        $languages = array_flip(config('locales'));
+        array_walk($languages, function (&$value, $key): void {
+            $value = 'language.' . $key;
+        });
 
         $currentLanguage = $this->auth->user()->settings->language;
 
@@ -224,12 +223,8 @@ class SettingsController extends BaseController
     public function saveLanguage(Request $request): Response
     {
         $user = $this->auth->user();
-        $data = $this->validate($request, ['select_language' => 'required']);
+        $data = $this->validate($request, ['select_language' => 'required|in:' . implode(',', config('locales'))]);
         $selectLanguage = $data['select_language'];
-
-        if (!isset(config('locales')[$selectLanguage])) {
-            throw new HttpNotFound('Language ' . $selectLanguage . ' does not exist.');
-        }
 
         $user->settings->language = $selectLanguage;
         $user->settings->save();
@@ -388,7 +383,7 @@ class SettingsController extends BaseController
     public function settingsMenu(): array
     {
         $menu = [
-            url('/users', ['action' => 'view']) => ['title' => 'profile.my-shifts', 'icon' => 'chevron-left'],
+            url('/users', ['action' => 'view']) => ['title' => 'profile.my_shifts', 'icon' => 'chevron-left'],
             url('/settings/profile')  => 'settings.profile',
             url('/settings/password') => ['title' => 'settings.password', 'icon' => 'key-fill'],
         ];
@@ -423,8 +418,9 @@ class SettingsController extends BaseController
 
     protected function checkOauthHidden(): bool
     {
-        foreach (config('oauth') as $config) {
-            if (empty($config['hidden'])) {
+        $userServices = $this->auth->user()->oauth;
+        foreach (config('oauth') as $name => $config) {
+            if (empty($config['hidden']) || $userServices->contains('provider', $name)) {
                 return false;
             }
         }
@@ -449,7 +445,7 @@ class SettingsController extends BaseController
     private function isRequired(string $key): string
     {
         $requiredFields = $this->config->get('required_user_fields');
-        return $requiredFields[$key] ? 'required' : 'optional';
+        return in_array($key, $requiredFields) ? 'required' : 'optional';
     }
 
     /**

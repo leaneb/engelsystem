@@ -150,11 +150,11 @@
         <div class="row g-4">
             {% if goodie_tshirt %}
                 <div class="col-12">
-                    {{ f.select('shirt_size', __('settings.profile.shirt_size'), config('tshirt_sizes'), {
+                    {{ f.select('shirt_size', __('user.shirt_size'), config('tshirt_sizes'), {
                         'selected': userdata.personalData.shirt_size,
                         'required': isTShirtSizeRequired,
                         'required_icon': isTShirtSizeRequired,
-                        'default_option': __('form.select_placeholder'),
+                        'default_option': isTShirtSizeRequired and userdata.personalData.shirt_size ? null : __('form.select_placeholder'),
                         'disabled': userdata.state.got_goodie,
                         'info': __('settings.profile.shirt_size.hint'),
                         'raw_form_text': true,

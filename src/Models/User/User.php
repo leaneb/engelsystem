@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Engelsystem\Models\AngelType;
 use Engelsystem\Models\BaseModel;
 use Engelsystem\Models\Group;
+use Engelsystem\Models\LogEntry;
 use Engelsystem\Models\Message;
 use Engelsystem\Models\News;
 use Engelsystem\Models\NewsComment;
@@ -46,6 +47,7 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property-read string                        $displayName
  *
  * @property-read Collection|Group[]            $groups
+ * @property-read Collection|LogEntry[]         $logs
  * @property-read Collection|News[]             $news
  * @property-read Collection|NewsComment[]      $newsComments
  * @property-read Collection|OAuth[]            $oauth
@@ -53,6 +55,7 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property-read Collection|AngelType[]        $userAngelTypes
  * @property-read UserAngelType                 $pivot
  * @property-read Collection|ShiftEntry[]       $shiftEntries
+ * @property-read Collection|ShiftEntry[]       $siftEntriesMarkedFreeloaded
  * @property-read Collection|Session[]          $sessions
  * @property-read Collection|Worklog[]          $worklogs
  * @property-read Collection|Worklog[]          $worklogsCreated
@@ -124,9 +127,14 @@ class User extends BaseModel
     public function isFreeloader(): bool
     {
         return $this->shiftEntries()
-                ->where('freeloaded', true)
+                ->whereNotNull('freeloaded_by')
                 ->count()
             >= config('max_freeloadable_shifts');
+    }
+
+    public function siftEntriesMarkedFreeloaded(): HasMany
+    {
+        return $this->hasMany(ShiftEntry::class, 'freeloaded_by');
     }
 
     public function license(): HasOne
@@ -192,6 +200,11 @@ class User extends BaseModel
             ->wherePivot('angel_type_id', $angelType->id)
             ->wherePivot('supporter', true)
             ->exists();
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(LogEntry::class);
     }
 
     public function news(): HasMany

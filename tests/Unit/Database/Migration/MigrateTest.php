@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Engelsystem\Test\Unit\Database\Migration;
 
 use Engelsystem\Application;
-use Engelsystem\Database\Migration\Migrate;
 use Engelsystem\Database\Migration\Direction;
+use Engelsystem\Database\Migration\Migrate;
 use Engelsystem\Test\Unit\TestCase;
 use Exception;
 use Illuminate\Database\Capsule\Manager as CapsuleManager;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder as SchemaBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -190,29 +191,25 @@ class MigrateTest extends TestCase
 
         $migration = new Migrate($schema, $app);
 
-        $messages = [];
-        $migration->setOutput(function ($msg) use (&$messages): void {
-            $messages[] = $msg;
-        });
-
         $migration->run(__DIR__ . '/Stub', Direction::UP);
 
         $this->assertTrue($schema->hasTable('migrations'));
 
         $migrations = $db->table('migrations')->get();
-        $this->assertCount(3, $migrations);
+        $this->assertCount(4, $migrations);
         $this->assertFalse($migrations->contains('migration', 'lock'));
 
         $this->assertTrue($migrations->contains('migration', '2001_04_11_123456_create_lorem_ipsum_table'));
         $this->assertTrue($migrations->contains('migration', '2017_12_24_053300_another_stuff'));
         $this->assertTrue($migrations->contains('migration', '2022_12_22_221222_add_some_feature'));
+        $this->assertTrue($migrations->contains('migration', '2025_01_06_112911_oauth2_server_tables'));
 
         $this->assertTrue($schema->hasTable('lorem_ipsum'));
 
         $migration->run(__DIR__ . '/Stub', Direction::DOWN, true);
 
         $migrations = $db->table('migrations')->get();
-        $this->assertCount(2, $migrations);
+        $this->assertCount(3, $migrations);
 
         $migration->run(__DIR__ . '/Stub', Direction::DOWN);
 
@@ -224,5 +221,40 @@ class MigrateTest extends TestCase
         $db->table('migrations')->insert(['migration' => 'lock']);
         $this->expectException(Exception::class);
         $migration->run(__DIR__ . '/Stub', Direction::UP);
+    }
+
+    /**
+     * @covers \Engelsystem\Database\Migration\Migrate::run
+     */
+    public function testRunPrune(): void
+    {
+        $dbManager = new CapsuleManager($this->app);
+        $dbManager->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
+        $dbManager->bootEloquent();
+        $db = $dbManager->getConnection();
+        $db->useDefaultSchemaGrammar();
+        $schema = $db->getSchemaBuilder();
+
+        $this->app->instance('schema', $schema);
+        $this->app->bind(SchemaBuilder::class, 'schema');
+
+        $migration = new Migrate($schema, $this->app);
+
+        $messages = [];
+        $migration->setOutput(function ($msg) use (&$messages): void {
+            $messages[] = $msg;
+        });
+
+        foreach (['test', 'another_test', 'test3'] as $name) {
+            $schema->create($name, function (Blueprint $table): void {
+                $table->increments('id');
+            });
+        }
+        $this->assertCount(3, $schema->getTables());
+
+        $migration->run(__DIR__ . '/Stub', Direction::DOWN, false, false, true);
+        $this->assertCount(0, $schema->getTables());
+
+        $this->assertCount(1, $messages);
     }
 }

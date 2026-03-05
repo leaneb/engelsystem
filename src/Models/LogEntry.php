@@ -9,6 +9,7 @@ use Engelsystem\Models\User\User;
 use Engelsystem\Models\User\UsesUserModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection as SupportCollection;
 
@@ -29,6 +30,7 @@ use Illuminate\Support\Collection as SupportCollection;
 class LogEntry extends BaseModel
 {
     use UsesUserModel;
+    use HasFactory;
 
     /** @var bool enable timestamps for created_at */
     public $timestamps = true; // phpcs:ignore
@@ -58,8 +60,11 @@ class LogEntry extends BaseModel
     /**
      * @return Builder[]|Collection|SupportCollection|LogEntry[]
      */
-    public static function filter(?string $keyword = null, ?int $userId = null): array|Collection|SupportCollection
-    {
+    public static function filter(
+        ?string $keyword = null,
+        ?int $userId = null,
+        ?string $level = null
+    ): array | Collection | SupportCollection {
         $query = self::with(['user', 'user.personalData', 'user.state'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -73,12 +78,12 @@ class LogEntry extends BaseModel
             });
         }
 
+        if (!empty($level)) {
+            $query->where('level', '=', $level);
+        }
+
         if (!empty($keyword)) {
-            $query
-                ->where(function (Builder $query) use ($keyword): void {
-                    $query->where('level', '=', $keyword)
-                        ->orWhere('message', 'LIKE', '%' . $keyword . '%');
-                });
+            $query->where('message', 'LIKE', '%' . $keyword . '%');
         }
 
         return $query->get();

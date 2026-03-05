@@ -7,13 +7,19 @@ namespace Engelsystem\Models\Shifts;
 use Carbon\Carbon;
 use Engelsystem\Models\BaseModel;
 use Engelsystem\Models\Location;
+use Engelsystem\Models\Tag;
 use Engelsystem\Models\User\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Query\Grammars\SQLiteGrammar;
+use Illuminate\Database\Query\JoinClause;
 
 /**
  * @property int                               $id
@@ -32,8 +38,10 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  *
  * @property-read Collection|NeededAngelType[] $neededAngelTypes
  * @property-read Schedule                     $schedule
+ * @property-read ScheduleShift                $scheduleShift
  * @property-read Collection|ShiftEntry[]      $shiftEntries
  * @property-read ShiftType                    $shiftType
+ * @property-read Collection|Tag[]             $tags
  * @property-read Location                     $location
  * @property-read User                         $createdBy
  * @property-read User|null                    $updatedBy
@@ -101,6 +109,11 @@ class Shift extends BaseModel
         return $this->hasOneThrough(Schedule::class, ScheduleShift::class, null, 'id', null, 'schedule_id');
     }
 
+    public function scheduleShift(): HasOne
+    {
+        return $this->hasOne(ScheduleShift::class);
+    }
+
     public function shiftEntries(): HasMany
     {
         return $this->hasMany(ShiftEntry::class);
@@ -121,9 +134,99 @@ class Shift extends BaseModel
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'shift_tags');
+    }
+
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function scopeNeedsUsers(Builder $query): void
+    {
+        $query
+            ->addSelect([
+                // This is "hidden" behind an attribute to not "poison" the SELECT default with fields from added joins
+                'needs_users' => Shift::from('shifts as s2')
+                    ->leftJoin('schedule_shift', 'schedule_shift.shift_id', 's2.id')
+                    ->leftJoin('schedules', 'schedules.id', 'schedule_shift.schedule_id')
+                    ->leftJoin('needed_angel_types', function (JoinClause $join): void {
+                        // Directly
+                        $join->on('needed_angel_types.shift_id', 's2.id')
+                            // Via schedule location
+                            ->orOn('needed_angel_types.location_id', 's2.location_id')
+                            // Via schedule shift type
+                            ->orOn('needed_angel_types.shift_type_id', 'schedules.shift_type');
+                    })
+                    ->whereColumn('s2.id', 'shifts.id')
+                    ->where(function (Builder $query): void {
+                        $query
+                            ->where(function (Builder $query): void {
+                                $query
+                                    // Direct requirement
+                                    ->whereColumn('needed_angel_types.shift_id', 's2.id')
+                                    // Or has schedule & via location
+                                    ->orWhere(function (Builder $query): void {
+                                        $query
+                                            ->where('schedules.needed_from_shift_type', false)
+                                            ->whereColumn('needed_angel_types.location_id', 's2.location_id');
+                                    })
+                                    // Or has schedule & via type
+                                    ->orWhere(function (Builder $query): void {
+                                        $query
+                                            ->where('schedules.needed_from_shift_type', true)
+                                            ->whereColumn('needed_angel_types.shift_type_id', 's2.shift_type_id');
+                                    });
+                            });
+                    })
+                    ->selectRaw('COUNT(*) > 0'),
+            ]);
+
+        if ($query->getConnection()->getQueryGrammar() instanceof SQLiteGrammar) {
+            // SQLite does not support HAVING for non-aggregate queries
+            $query->where('needs_users', '>', 0);
+        } else {
+            // @codeCoverageIgnoreStart
+            // needs_users is defined on select and thus only available after select
+            $query->having('needs_users', '>', 0);
+            // @codeCoverageIgnoreEnd
+        }
+    }
+
+    /**
+     * get next shift with same shift type and location
+     */
+    public function nextShift(): Shift|null
+    {
+        $query = Shift::query();
+        if (Shift::whereTitle($this->title)->where('start', '>', $this->start)->exists()) {
+            $query = $query->where('title', $this->title);
+        }
+        return $query
+            ->where('shift_type_id', $this->shiftType->id)
+            ->where('location_id', $this->location->id)
+            ->where('start', '>', $this->start)
+            ->orderBy('start')
+            ->first();
+    }
+
+    /**
+     * get previous shift with same shift type and location
+     */
+    public function previousShift(): Shift|null
+    {
+        $query = Shift::query();
+        if (Shift::whereTitle($this->title)->where('end', '<', $this->end)->exists()) {
+            $query = $query->where('title', $this->title);
+        }
+        return $query
+            ->where('shift_type_id', $this->shiftType->id)
+            ->where('location_id', $this->location->id)
+            ->where('end', '<', $this->end)
+            ->orderBy('end', 'desc')
+            ->first();
     }
 
     /**
@@ -133,7 +236,7 @@ class Shift extends BaseModel
     {
         $config = config('night_shifts');
 
-        /** @see User_get_shifts_sum_query to keep it in sync */
+        /** @see \Engelsystem\Helpers\Goodie::shiftScoreQuery to keep them in sync */
         return $config['enabled'] && (
                 // Starts during night
                 $this->start->hour >= $config['start'] && $this->start->hour < $config['end']

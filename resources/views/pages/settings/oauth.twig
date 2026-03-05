@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block row_content %}
-<table class="table table-striped">
+<table class="table table-striped table-sticky-header">
     <thead>
         <tr>
             <th>{{ __('settings.oauth.identity-provider') }}</th>
@@ -20,7 +20,7 @@
     </thead>
     <tbody>
     {% for name,config in providers %}
-        <tr{% if config.hidden|default(false) %} class="d-none"{% endif %}>
+        <tr{% if config.hidden|default(false) and not user.oauth.contains('provider', name) %} class="d-none"{% endif %}>
             <td>
                 {% if config.url|default %}
                     <a href="{{ config.url }}" target="_blank" rel="noopener">
@@ -37,7 +37,7 @@
 
                         {{ f.submit(__('form.connect'), {'size' : 'sm', 'icon_left': 'box-arrow-in-right'}) }}
                     </form>
-                {% else %}
+                {% elseif config.allow_user_disconnect is not defined or config.allow_user_disconnect %}
                     <form method="post" action="{{ url('/oauth/' ~ name ~ '/disconnect') }}">
                         {{ csrf() }}
 

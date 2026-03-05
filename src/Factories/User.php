@@ -70,7 +70,7 @@ class User
     private function isRequired(string $key): string
     {
         $requiredFields = $this->config->get('required_user_fields');
-        return $requiredFields[$key] ? 'required' : 'optional';
+        return in_array($key, $requiredFields) ? 'required' : 'optional';
     }
 
     /**
@@ -82,6 +82,7 @@ class User
         $validationRules = [
             'username' => 'required|username',
             'email' => 'required|email',
+            'email_system'  => 'optional|checked',
             'email_shiftinfo' => 'optional|checked',
             'email_by_human_allowed' => 'optional|checked',
             'email_messages' => 'optional|checked',
@@ -153,55 +154,40 @@ class User
             $validationRules['tshirt_size'] = $this->isRequired('tshirt_size') . '|shirt-size';
         }
 
-        $data = $this->validate($rawData, $validationRules);
+        // Run validation but don't throw yet - collect all errors first
+        $this->validator->validate($rawData, $validationRules);
+        $data = $this->validator->getData();
 
-        // additional validations
-        $this->validateUniqueUsername($data['username']);
-        $this->validateUniqueEmail($data['email']);
+        // Check uniqueness for fields that passed basic validation
+        if (isset($data['username']) && EngelsystemUser::whereName($data['username'])->exists()) {
+            $this->validator->addErrors(['username' => ['settings.profile.nick.already-taken']]);
+        }
 
-        if ($isPasswordEnabled) {
-            // Finally, validate that password matches password_confirmation.
-            // The respect keyValue validation does not seem to work.
-            $this->validatePasswordMatchesConfirmation($rawData);
+        if (isset($data['email']) && EngelsystemUser::whereEmail($data['email'])->exists()) {
+            $this->validator->addErrors(['email' => ['settings.profile.email.already-taken']]);
+        }
+
+        if (
+            $isPasswordEnabled
+            && isset($data['password'])
+            && $rawData['password'] !== $rawData['password_confirmation']
+        ) {
+            $this->validator->addErrors(['password' => ['settings.password.confirmation-does-not-match']]);
+        }
+
+        // Now throw if ANY validation errors occurred
+        if (!empty($this->validator->getErrors())) {
+            throw new ValidationException($this->validator);
+        }
+
+        // simplified e-mail preferences
+        if ($data['email_system']) {
+            $data['email_shiftinfo'] = true;
+            $data['email_messages'] = true;
+            $data['email_news'] = true;
         }
 
         return $data;
-    }
-
-    /**
-     * @param Array<string, mixed> $rawData
-     */
-    private function validatePasswordMatchesConfirmation(array $rawData): void
-    {
-        if ($rawData['password'] !== $rawData['password_confirmation']) {
-            throw new ValidationException(
-                (new Validator())->addErrors(['password' => [
-                    'settings.password.confirmation-does-not-match',
-                ]])
-            );
-        }
-    }
-
-    private function validateUniqueUsername(string $username): void
-    {
-        if (EngelsystemUser::whereName($username)->exists()) {
-            throw new ValidationException(
-                (new Validator())->addErrors(['username' => [
-                    'settings.profile.nick.already-taken',
-                ]])
-            );
-        }
-    }
-
-    private function validateUniqueEmail(string $email): void
-    {
-        if (EngelsystemUser::whereEmail($email)->exists()) {
-            throw new ValidationException(
-                (new Validator())->addErrors(['email' => [
-                    'settings.profile.email.already-taken',
-                ]])
-            );
-        }
     }
 
     /**
@@ -267,7 +253,6 @@ class User
         $state = new State([]);
 
         if ($this->config->get('autoarrive')) {
-            $state->arrived = true;
             $state->arrival_date = CarbonImmutable::now();
         }
 
@@ -293,6 +278,15 @@ class User
             $this->session->remove('oauth2_access_token');
             $this->session->remove('oauth2_refresh_token');
             $this->session->remove('oauth2_expires_at');
+
+            $this->logger->info(
+                '{user} connected OAuth user {oauth_user} using {provider}',
+                [
+                    'provider' => $oauth->provider,
+                    'user' => sprintf('%s (%u)', $user->displayName, $user->id),
+                    'oauth_user' => $oauth->identifier,
+                ]
+            );
         }
 
         $defaultGroup = Group::find($this->authenticator->getDefaultRole());
@@ -306,7 +300,7 @@ class User
         $assignedAngelTypeNames = $this->assignAngelTypes($user, $rawData);
 
         $this->logger->info(
-            'User {user} signed up as: {angeltypes}',
+            'User {user} registered and signed up as: {angeltypes}',
             [
                 'user' => sprintf('%s (%u)', $user->displayName, $user->id),
                 'angeltypes' => join(', ', $assignedAngelTypeNames),
@@ -333,16 +327,5 @@ class User
         }
 
         return $assignedAngelTypeNames;
-    }
-
-    private function validate(array $rawData, array $rules): array
-    {
-        $isValid = $this->validator->validate($rawData, $rules);
-
-        if (!$isValid) {
-            throw new ValidationException($this->validator);
-        }
-
-        return $this->validator->getData();
     }
 }

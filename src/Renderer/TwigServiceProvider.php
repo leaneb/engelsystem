@@ -15,7 +15,9 @@ use Engelsystem\Renderer\Twig\Extensions\Globals;
 use Engelsystem\Renderer\Twig\Extensions\Legacy;
 use Engelsystem\Renderer\Twig\Extensions\Markdown;
 use Engelsystem\Renderer\Twig\Extensions\Notification;
+use Engelsystem\Renderer\Twig\Extensions\Qr;
 use Engelsystem\Renderer\Twig\Extensions\Session;
+use Engelsystem\Renderer\Twig\Extensions\StringExtension;
 use Engelsystem\Renderer\Twig\Extensions\Translation;
 use Engelsystem\Renderer\Twig\Extensions\Url;
 use Engelsystem\Renderer\Twig\Extensions\Uuid;
@@ -38,8 +40,10 @@ class TwigServiceProvider extends ServiceProvider
         'notification'   => Notification::class,
         'twigmodel'      => TwigModel::class,
         'session'        => Session::class,
+        'string'         => StringExtension::class,
         'legacy'         => Legacy::class,
         'markdown'       => Markdown::class,
+        'qr'             => Qr::class,
         'translation'    => Translation::class,
         'url'            => Url::class,
         'uuid'           => Uuid::class,
@@ -58,9 +62,12 @@ class TwigServiceProvider extends ServiceProvider
     {
         /** @var Twig $renderer */
         $renderer = $this->app->get('twig.environment');
+        /** @var Twig $textRenderer */
+        $textRenderer = $this->app->get('twig.textEnvironment');
 
         foreach ($this->app->tagged('twig.extension') as $extension) {
             $renderer->addExtension($extension);
+            $textRenderer->addExtension($extension);
         }
 
         if (class_exists(VarDumper::class)) {
@@ -81,6 +88,9 @@ class TwigServiceProvider extends ServiceProvider
         $this->app->instance(TwigLoaderInterface::class, $twigLoader);
         $this->app->instance('twig.loader', $twigLoader);
 
+        $twigTextLoader = $this->app->make(TwigTextLoader::class, ['paths' => $viewsPath]);
+        $this->app->instance('twig.textLoader', $twigTextLoader);
+
         $cache = $this->app->get('path.cache.views');
         $twigDebug = false;
         if ($config->get('environment') == 'development') {
@@ -88,17 +98,15 @@ class TwigServiceProvider extends ServiceProvider
             $twigDebug = true;
         }
 
-        $twig = $this->app->make(
-            Twig::class,
-            [
-                'options' => [
-                    'cache'            => $cache,
-                    'auto_reload'      => true,
-                    'debug'            => $twigDebug,
-                    'strict_variables' => $twigDebug,
-                ],
-            ]
-        );
+        $twigOptions =  [
+            'cache'            => $cache,
+            'auto_reload'      => true,
+            'debug'            => $twigDebug,
+            'strict_variables' => $twigDebug,
+        ];
+
+        /** @var Twig $twig */
+        $twig = $this->app->make(Twig::class, ['options' => $twigOptions]);
         $this->app->instance(Twig::class, $twig);
         $this->app->instance('twig.environment', $twig);
 
@@ -108,6 +116,18 @@ class TwigServiceProvider extends ServiceProvider
 
         $twigEngine = $this->app->make(TwigEngine::class);
         $this->app->instance('renderer.twigEngine', $twigEngine);
+
+        /** @var Twig $textTwig */
+        $textTwig = $this->app->make(
+            Twig::class,
+            ['loader' => $twigTextLoader, 'options' => [...$twigOptions, 'autoescape' => false]]
+        );
+        $this->app->instance('twig.textEnvironment', $textTwig);
+        $twigTextEngine = $this->app->make(TwigEngine::class, ['twig' => $textTwig]);
+        $this->app->instance('renderer.twigTextEngine', $twigTextEngine);
+
+        // Text is tagged first to catch .text.twig files
+        $this->app->tag('renderer.twigTextEngine', ['renderer.engine']);
         $this->app->tag('renderer.twigEngine', ['renderer.engine']);
     }
 

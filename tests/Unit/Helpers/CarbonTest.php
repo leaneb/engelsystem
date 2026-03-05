@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Engelsystem\Test\Unit\Helpers;
 
+use Carbon\CarbonInterval;
 use Engelsystem\Helpers\Carbon;
-use PHPUnit\Framework\TestCase;
+use Engelsystem\Test\Unit\TestCase;
 use Traversable;
 
 class CarbonTest extends TestCase
@@ -24,6 +25,14 @@ class CarbonTest extends TestCase
         yield '202-12-12 11:11' => ['202-12-12T11:11'];
         yield '2022-23-24' => ['2022-23-24'];
         yield '16.04.2022 11:24' => ['16.04.2022 11:24'];
+    }
+
+    public function durations(): Traversable
+    {
+        yield '0h 00m' => [CarbonInterval::seconds(0), '0h 00m'];
+        yield '1h 00m' => [CarbonInterval::minutes(60), '1h 00m'];
+        yield '25h 42m' => [CarbonInterval::days(1)->addHours(1)->addMinutes(42), '25h 42m'];
+        yield '277h 46m' => [CarbonInterval::seconds(1_000_000), '277h 46m'];
     }
 
     /**
@@ -47,46 +56,12 @@ class CarbonTest extends TestCase
     }
 
     /**
-     * @covers \Engelsystem\Helpers\Carbon::createTimestampFromDatetime
-     * @dataProvider validDates
+     * @covers \Engelsystem\Helpers\Carbon::formatDuration
+     * @dataProvider durations
      */
-    public function testCreateTimestampFromValidDatetime(string $value, Carbon $expected): void
+    public function testFormatDuration(CarbonInterval $value, string $expected): void
     {
-        $timestamp = Carbon::createTimestampFromDatetime($value);
-        self::assertSame($expected->timestamp, $timestamp);
-    }
-
-    /**
-     * @covers \Engelsystem\Helpers\Carbon::createTimestampFromDatetime
-     * @dataProvider invalidDates
-     */
-    public function testCreateTimestampFromInvalidDatetime(string $value): void
-    {
-        $timestamp = Carbon::createTimestampFromDatetime($value);
-        self::assertNull($timestamp);
-    }
-
-    public function startOfHourDates(): array
-    {
-        return [
-            ['2022-04-16 10:00:00.000000', true],
-            ['2022-04-16 10:00:00.000000', true, true],
-            ['2022-04-16 10:00:00.123456', true, false],
-            ['2022-04-16 23:00:00.000000', true, false],
-            ['2022-04-16 10:00:42.000000', false],
-            ['2022-04-16 10:23:00.000000', false],
-            ['2022-04-16 10:00:00.123456', false, true],
-        ];
-    }
-
-    /**
-     * @covers       \Engelsystem\Helpers\Carbon::isStartOfHour
-     * @dataProvider startOfHourDates
-     */
-    public function testIsStartOfHour(string $value, bool $expected, bool $checkMicroseconds = false): void
-    {
-        $date = Carbon::createFromFormat('Y-m-d H:i:s.u', $value);
-
-        $this->assertEquals($expected, $date->isStartOfHour($checkMicroseconds));
+        $formatted = Carbon::formatDuration($value, '%dh %02dm');
+        self::assertSame($expected, $formatted);
     }
 }
